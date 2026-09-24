@@ -29,7 +29,7 @@ def main() -> int:
         load_dotenv(ENV, override=False)
 
     provider = os.getenv("LLM_PROVIDER", "vilao").lower().strip()
-    fallback = os.getenv("LLM_FALLBACK_PROVIDER", "deepseek").lower().strip()
+    fallback = os.getenv("LLM_FALLBACK_PROVIDER", "").lower().strip()
 
     print(f"LLM provider : {provider}")
     print(f"Fallback     : {fallback or 'disabled'}")
