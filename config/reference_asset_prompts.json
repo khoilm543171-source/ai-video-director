@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "purpose": "Create clean reusable Flow Ingredients/reference assets before episode production.",
+  "generation_notes": [
+    "Generate each reference as a clean still image, not a video.",
+    "Use a plain light neutral background for character references.",
+    "Use no text, no logos, no watermark.",
+    "Keep the same visual style across all references.",
+    "After generation, name the assets exactly TinyCadet, ChiefEngineer and EngineRoom in Flow."
+  ],
+  "assets": {
+    "TinyCadet": {
+      "kind": "character",
+      "recommended_views": [
+        "front_three_quarter",
+        "side_three_quarter"
+      ],
+      "prompt": "Full-body character reference sheet image of Tiny Cadet, a fictional young adult merchant-ship engine cadet in a tiny cute stylized 3D animated universe. Compact miniature proportions with a slightly oversized head, round friendly face, bright attentive eyes, curious eyebrows, short neat dark hair mostly hidden under a plain white safety helmet. Clean navy-blue engine cadet coverall with subtle reflective piping, black safety shoes, no company logo, no rank insignia, no name tag. Energetic, curious and technically credible rather than childish. Neutral relaxed standing pose, hands visible, accurate PPE, consistent body proportions. High-quality polished 3D animation look, soft studio lighting, plain light-gray seamless background, full body completely visible, centered composition, no props, no text, no watermark.",
+      "avoid": "baby-like proportions, beard, mustache, colored helmet, casual clothes, random logos, exaggerated muscles, extra fingers, cropped feet, props, machinery, text"
+    },
+    "ChiefEngineer": {
+      "kind": "character",
+      "recommended_views": [
+        "front_three_quarter",
+        "side_three_quarter"
+      ],
+      "prompt": "Full-body character reference sheet image of Chief Engineer, a fictional experienced merchant-ship chief engineer in the same tiny cute stylized 3D animated universe as Tiny Cadet. Slightly taller and broader miniature proportions, calm warm authoritative face, mature but approachable expression, short neat dark hair mostly hidden under a plain white safety helmet. Dark navy chief engineer coverall, black safety shoes, no company logo, no rank insignia, no name tag. Mentor-like posture, composed and confident, technically credible. Neutral relaxed standing pose, hands visible, accurate PPE. High-quality polished 3D animation look, soft studio lighting, plain light-gray seamless background, full body completely visible, centered composition, no props, no text, no watermark.",
+      "avoid": "villain expression, elderly frailty, colored helmet, suit and tie, random rank badges, logos, exaggerated muscles, extra fingers, cropped feet, text"
+    },
+    "EngineRoom": {
+      "kind": "environment",
+      "recommended_views": [
+        "master_wide_vertical"
+      ],
+      "prompt": "Empty recurring environment reference for a tiny stylized 3D animated educational series: a modern merchant ship engine room, vertical 9:16 composition, believable marine engineering layout with large diesel-engine machinery, steel decks, grated walkways, ladders, handrails, pipes, valves, cable trays and auxiliary machinery arranged plausibly. Navy, steel gray and off-white industrial palette with restrained safety-yellow accents. Clean practical overhead industrial lighting with soft cinematic contrast, slight warm machinery atmosphere, readable equipment shapes, realistic scale and depth. No people, no text, no company logos, no fantasy technology, no dramatic smoke, no fire, no sparks. The environment should feel like the same stable home location that can be reused across many episodes.",
+      "avoid": "spaceship, sci-fi corridor, generic factory, warehouse, passenger cabin, luxury interior, random text, logos, excessive fog, dramatic disaster lighting"
+    }
+  }
+}
