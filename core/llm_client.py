@@ -3,13 +3,16 @@ from __future__ import annotations
 import json
 import os
 import re
+from pathlib import Path
 from typing import Any
 
 import requests
 from dotenv import load_dotenv
 
 
-load_dotenv()
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+ENV_PATH = PROJECT_ROOT / ".env"
+load_dotenv(dotenv_path=ENV_PATH, override=False)
 
 
 class LLMConfigurationError(RuntimeError):
@@ -50,9 +53,17 @@ class OpenAICompatibleLLM:
         }
 
         if not self.api_key:
-            raise LLMConfigurationError(
-                "Missing LLM API key. Set LLM_API_KEY or DEEPSEEK_API_KEY."
-            )
+            if not ENV_PATH.exists():
+                hint = (
+                    f"No .env file found at {ENV_PATH}. "
+                    "Run: Copy-Item .env.example .env, then add LLM_API_KEY."
+                )
+            else:
+                hint = (
+                    f".env exists at {ENV_PATH}, but LLM_API_KEY and "
+                    "DEEPSEEK_API_KEY are empty or missing."
+                )
+            raise LLMConfigurationError(hint)
 
     def chat(
         self,
