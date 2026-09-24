@@ -34,6 +34,8 @@ def main() -> int:
 
     print(f"LLM provider : {provider}")
     print(f"Fallback     : {fallback or 'disabled'}")
+    print(f"Retry attempts: {os.getenv('LLM_RETRY_ATTEMPTS', '3')}")
+    print(f"Retry backoff : {os.getenv('LLM_RETRY_BACKOFF_SECONDS', '1.5')}s")
 
     problems: list[str] = []
 
