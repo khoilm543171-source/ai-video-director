@@ -240,3 +240,17 @@ def test_vilao_fallback_models_share_same_key(monkeypatch):
         "stable-third",
     ]
     assert all(client.api_key == "test-key" for client in routed.clients)
+
+
+def test_content_review_stage_is_routable(monkeypatch):
+    from core.provider_router import ProviderRouter
+
+    monkeypatch.setenv("LLM_PROVIDER", "vilao")
+    monkeypatch.setenv("LLM_FALLBACK_PROVIDER", "")
+    monkeypatch.setenv("VILAO_API_KEY", "test-key")
+    monkeypatch.setenv("VILAO_MODEL", "test-model")
+
+    routed = ProviderRouter().for_stage("content_review")
+
+    assert routed.clients[0].model == "test-model"
+    assert routed.route_name == "vilao:test-model"
