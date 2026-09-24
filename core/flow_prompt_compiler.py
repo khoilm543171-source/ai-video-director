@@ -216,7 +216,7 @@ def compile_flow_spec(spec: dict[str, Any], episodes_root: Path) -> Path:
                                      "total_duration_s": timeline, "jobs": jobs})
     _json(root / "flow_prompt_preflight.json", {"render_gate": "PASS", "blocking_issues": check_flow_spec(spec),
                                                  "source": "structured_episode_spec", "total_duration_s": timeline})
-    _write(flow / "START_HERE.md", "\n".join([
+    start_here_text = "\n".join([
         f"# {spec['title']} — eight separate scene files",
         "", "Create the same three reusable reference assets once:",
         *(f"- {name}" for name in references), "",
@@ -227,7 +227,9 @@ def compile_flow_spec(spec: dict[str, Any], episodes_root: Path) -> Path:
         "Verify actual duration and vertical ratio with scripts/check_flow_clips.py. Listen to every line and inspect lip sync and cross-scene handoffs before using videos.",
         "If a render cuts a word, changes a voice or flips geography, regenerate that scene. Never trim spoken words to meet timing.",
         "No API key is needed for this offline pack. FLOW_BATCH_PROMPT.txt is a production brief; do not paste it as one single-video prompt.", "",
-    ]))
+    ])
+    _write(flow / "START_HERE.md", start_here_text)
+    _write(flow / "REFERENCE_SETUP.md", start_here_text)
     old_status = previous_manifest.get("status") if previous_manifest else None
     has_rendered_scenes = any((root / "scenes").glob("scene_*.mp4"))
     new_status = "needs_scene_review" if metadata_changed and has_rendered_scenes else (

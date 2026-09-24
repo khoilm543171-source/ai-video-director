@@ -14,7 +14,16 @@ No generated video or image reference ships with this repository.
 
 ## On Windows
 
-In PowerShell from the repository root:
+If you have not cloned the repository yet, use a folder you own (for example
+`Documents`), then enter it:
+
+```powershell
+Set-Location (Join-Path $HOME "Documents")
+git clone https://github.com/khoilm543171-source/ai-video-director.git
+Set-Location ai-video-director
+```
+
+Otherwise, in PowerShell from your existing repository root:
 
 ```powershell
 git pull
@@ -65,6 +74,9 @@ python scripts/check_flow_clips.py --episode-id episode_001_fuel_oil_purifier
 
 The script requires eight distinct MP4s, exact planned lengths within a frame
 tolerance, 9:16 video, and audio streams. Also perform a human pass:
+
+If `ffprobe` is missing, install FFmpeg and make sure `ffprobe -version` works
+in a new PowerShell window before rerunning the validator.
 
 - All quoted dialogue, in speaker order, is audible verbatim; no repeated words
   at extensions; Chief's scene 07 nod follows the Cadet's last word.
