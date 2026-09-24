@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from core.agent_runtime import run_typed_agent
 from core.llm_client import OpenAICompatibleLLM
+from core.skill_loader import compose_skills
 from core.schemas import ScriptOutput, StoryboardOutput
 from core.token_economy import (
     minimal_character_visuals,
@@ -21,7 +22,7 @@ Rules:
 - Use a simple cutaway only when needed to explain a technical process.
 - Avoid dense labels, readable gauges, logos and complex UI.
 - Maintain spatial and character continuity.
-"""
+""" + "\n\n" + compose_skills("camera-direction")
 
 
 def run(
