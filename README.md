@@ -387,33 +387,59 @@ Recommended Flow sequence:
 
 ## Episode 001 quick launch
 
-Episode 001 is the Fuel Oil Purifier Engine Cadet interview short.
+Episode 001 has an approved, structured 8-scene Flow spec in
+`examples/episode_001_flow.json`. The eight locked final durations are
+`6, 12, 9, 13, 8, 5, 12, 4` seconds (69 seconds total). It compiles offline;
+no planning LLM key or paid Veo API call is needed to create the prompt pack.
 
 Input:
 
-    examples/episode_001_fuel_oil_purifier.json
+    examples/episode_001_flow.json
 
-On Windows, after pulling the latest repository and installing dependencies:
+On Windows, while the fix is in PR #1, check out its branch, then launch:
 
+    git fetch origin
+    git switch --track origin/codex/episode001-flow-spec-20260925
+    python -m pip install -r requirements-orchestrator.txt
     powershell -ExecutionPolicy Bypass -File .\scripts\start_episode_001.ps1
 
-The launcher:
-1. runs offline tests,
-2. checks pipeline readiness,
-3. smoke-tests the planning LLM,
-4. generates/reuses Episode 001,
-5. respects the Content Review gate,
-6. builds the Google Flow prompt pack.
+The launcher runs offline tests and compiles the eight jobs from the approved
+spec. To compile without running the tests first:
+
+    python scripts/build_flow_pack.py --episode-id episode_001_fuel_oil_purifier
+
+Preflight blocks missing scenes, mismatched dialogue fragments, reversed
+character sides or broken handoffs. The LLM reviewer score is advisory.
 
 The launcher intentionally stops before spending Flow credits.
 
 Render only scene_01 first from:
 
-    outputs\episodes\episode_001_fuel_oil_purifier\flow_jobs\scene_01.txt
+    outputs\episodes\episode_001_fuel_oil_purifier\flow_jobs\scene_01_base.txt
 
 Save the result as:
 
     outputs\episodes\episode_001_fuel_oil_purifier\scenes\scene_01.mp4
+
+Follow `outputs/episodes/episode_001_fuel_oil_purifier/flow_jobs/START_HERE.md`
+for the remaining independent jobs. According to the [Google Flow supported
+features](https://support.google.com/flow/answer/16352836?hl=en), Veo 3.1
+Ingredients/References generations last 8 seconds, and Veo 3.1 Lite can extend
+8-second clips. Scenes longer than eight seconds therefore require an extension
+*inside that same scene* and verified trimming; short scenes need a verified
+trim. The prompt alone cannot guarantee an exact exported duration or verbatim
+dialogue. Keep scene_07 under special voice/lip-sync review at the extension
+boundary. The final delivery remains **eight separate video files**.
+
+After saving all clips, run:
+
+    python scripts/check_flow_clips.py --episode-id episode_001_fuel_oil_purifier
+
+It checks all eight file names, durations, vertical framing and audio streams.
+Listen for exact dialogue and inspect identity and handoffs manually. Do not
+run `render_episode.py` with Episode 001: that direct Veo API renderer cannot
+submit the approved 9–13 second Flow jobs in one native call. See
+`docs/EPISODE_001_FLOW.md` for step-by-step production and recovery.
 
 Then run the full-video multimodal Visual Reviewer:
 

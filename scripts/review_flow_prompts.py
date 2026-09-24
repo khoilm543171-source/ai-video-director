@@ -12,6 +12,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from agents import flow_prompt_reviewer
 from core.flow_prompt_checks import run_flow_prompt_checks
+from core.flow_preflight import check_flow_spec
 from core.provider_router import ProviderRouter
 from core.schemas import (
     ContextOutput,
@@ -33,6 +34,16 @@ def main() -> int:
     )
     parser.add_argument("--episode-id", required=True)
     args = parser.parse_args()
+
+    if args.episode_id == "episode_001_fuel_oil_purifier":
+        spec = load_json(PROJECT_ROOT / "examples" / "episode_001_flow.json")
+        issues = check_flow_spec(spec)
+        print(f"Episode: {args.episode_id}")
+        print(f"Deterministic render gate: {'BLOCK' if issues else 'PASS'}")
+        for item in issues:
+            print(f"- {item['scene_id'] or 'episode'}: {item['finding']}")
+        print("LLM score is advisory and not needed to compile the approved spec.")
+        return 2 if issues else 0
 
     root = PROJECT_ROOT / "outputs" / "episodes"
     state = EpisodeStateManager(root)
@@ -73,17 +84,24 @@ def main() -> int:
     ]
     render_gate = "BLOCK" if deterministic_blockers else "PASS"
 
-    review = flow_prompt_reviewer.run(
-        ProviderRouter().for_stage("flow_prompt_review"),
-        request,
-        script,
-        storyboard,
-        context,
-        veo_prompts,
-    )
+    review = None
+    advisory_error = None
+    if render_gate == "PASS":
+        try:
+            review = flow_prompt_reviewer.run(
+                ProviderRouter().for_stage("flow_prompt_review"),
+                request,
+                script,
+                storyboard,
+                context,
+                veo_prompts,
+            )
+        except Exception as exc:
+            advisory_error = f"{type(exc).__name__}: {exc}"
 
     out = episode_dir / "flow_prompt_review.json"
-    state.write_json(out, review.model_dump())
+    if review is not None:
+        state.write_json(out, review.model_dump())
 
     preflight_out = episode_dir / "flow_prompt_preflight.json"
     state.write_json(
@@ -92,8 +110,9 @@ def main() -> int:
             "render_gate": render_gate,
             "blocking_issues": deterministic_blockers,
             "all_deterministic_issues": deterministic_issues,
-            "llm_review_decision": review.decision,
-            "llm_review_score": review.overall_score,
+            "llm_review_decision": review.decision if review else None,
+            "llm_review_score": review.overall_score if review else None,
+            "llm_review_error": advisory_error,
         },
     )
 
@@ -103,7 +122,8 @@ def main() -> int:
         else "needs_flow_prompt_revision"
     )
     manifest.current_stage = "flow_prompt_review"
-    manifest.files["flow_prompt_review"] = str(out)
+    if review is not None:
+        manifest.files["flow_prompt_review"] = str(out)
     manifest.files["flow_prompt_preflight"] = str(preflight_out)
     if "flow_prompt_review" not in manifest.completed_stages:
         manifest.completed_stages.append("flow_prompt_review")
@@ -112,11 +132,15 @@ def main() -> int:
 
     print(f"Episode  : {args.episode_id}")
     print(f"Render gate : {render_gate}")
-    print(f"LLM review  : {review.decision}")
-    print(f"LLM score   : {review.overall_score}/100")
+    print(f"LLM review  : {review.decision if review else 'unavailable (advisory)'}")
+    print(f"LLM score   : {str(review.overall_score) + '/100' if review else 'n/a'}")
     print(f"Report      : {out}")
     print(f"Preflight   : {preflight_out}")
     print()
+    if review is None:
+        print(advisory_error or "Deterministic issues blocked advisory review.")
+        return 0 if render_gate == "PASS" else 2
+
     print(review.executive_summary)
 
     for scene in review.scene_reviews:

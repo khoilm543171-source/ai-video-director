@@ -1,0 +1,100 @@
+{
+  "episode_id": "episode_001_fuel_oil_purifier",
+  "title": "Tiny Engine Cadet — Fuel Oil Purifier",
+  "expected_clips": 8,
+  "target_duration_s": 69,
+  "technical_truth": "A fuel oil purifier removes water and solid impurities from fuel oil by centrifugal separation so cleaner fuel can be supplied to the engine.",
+  "interview_question": "Interview question: What is the purpose of a fuel oil purifier?",
+  "forbidden_claim_terms": ["rpm", "bowl speed", "temperature", "pressure", "maintenance", "cleaning interval", "alarm", "troubleshooting", "regulation", "center flow"],
+  "global": {
+    "style": "Cute stylized miniature adult 3D animation, cinematic educational short, realistic merchant ship machinery scale. Native vertical 9:16 safe framing; no photoreal people, anime, 2D or childlike characters.",
+    "environment": "The same merchant ship engine room throughout: steel deck, steel pipes, valves, cable trays, walkways, handrails and large marine machinery; navy, off-white and safety-yellow palette; warm practical lights and subtle rim light. Never a factory, laboratory, spaceship or fantasy room.",
+    "tiny_cadet": "@TinyCadet: same young adult male face, skin tone, hair, miniature adult proportions, navy-blue cadet coverall, white safety helmet and black safety shoes; curious, competent and energetic.",
+    "chief_engineer": "@ChiefEngineer: same adult male face, skin tone, miniature proportions slightly taller and broader than the cadet, dark navy coverall, white safety helmet and black safety shoes; calm experienced mentor.",
+    "purifier": "One consistent purifier design on the fuel path, inlet visually screen-left and outlet screen-right. Visual separation is symbolic; no claims about exact internal mechanics or flow channels.",
+    "geography": "Chief Engineer generally SCREEN-LEFT; Tiny Cadet generally SCREEN-RIGHT; fuel direction SCREEN-LEFT to SCREEN-RIGHT; no axis reversal.",
+    "audio": "Native synchronized exact character dialogue with natural lip-sync and consistent voice identity: cadet young adult, clear and curious; Chief adult, calm mentor. Subtle ship engine-room ambience. No narration, filler, subtitles, music or singing.",
+    "avoid": "No logos, signage, readable labels, overlays, title cards, crossfades, transitions, extra voices, invented RPM, bowl speed, temperatures, pressure, maintenance, cleaning intervals, alarms, troubleshooting, regulations, internal mechanical details or exact internal flow channels."
+  },
+  "scenes": [
+    {
+      "scene_id": "scene_01", "duration_s": 6, "state_in": "both_at_pipe", "state_out": "chief_looks_at_cadet_at_pipe", "chief_side": "left", "cadet_side": "right", "fuel_direction": "left_to_right", "purifier_orientation": "inlet_left_outlet_right",
+      "camera": "Fixed eye-level medium-wide three-quarter-left shot; no movement.",
+      "action": "Cadet already screen-right beside the fuel-oil pipe points to it; Chief already screen-left makes a small head turn. Neither enters or walks.",
+      "composition": "Both characters readable; the fuel pipe runs left to right across the lower vertical frame.",
+      "dialogue": [{"character": "chief_engineer", "text": "Do you know why we use a fuel oil purifier?"}],
+      "audio_timing": "One calm, curious question at a natural pace.",
+      "end_pose": "Chief looking at Cadet; Cadet still beside the pipe."
+    },
+    {
+      "scene_id": "scene_02", "duration_s": 12, "state_in": "chief_looks_at_cadet_at_pipe", "state_out": "both_look_toward_nearby_purifier", "chief_side": "left", "cadet_side": "right", "fuel_direction": "left_to_right", "purifier_orientation": "inlet_left_outlet_right",
+      "camera": "Fixed eye-level medium two-shot; no camera movement, cutaway, thought bubble or overlay.",
+      "action": "Cadet looks thoughtfully at the pipe; Chief listens, gives one confirming nod only after finishing his reply, then subtly directs attention to the nearby purifier. Cadet turns his gaze, no walking.",
+      "composition": "Chief left, Cadet right, pipe left to right; purifier nearby in the same engine room.",
+      "dialogue": [{"character": "tiny_cadet", "text": "To clean the fuel before it reaches the engine?"}, {"character": "chief_engineer", "text": "Exactly. The purifier removes water and solid impurities from the fuel."}],
+      "render_steps": {"base_action": "Cadet asks while looking at the pipe. Chief starts his reply and pauses naturally after 'and'. Neither walks.", "extend_action": "Continue Chief's SAME reply without repeating the earlier words. After his final word, one small nod; he redirects Cadet's gaze to the nearby purifier.", "base_dialogue": [{"character": "tiny_cadet", "text": "To clean the fuel before it reaches the engine?"}, {"character": "chief_engineer", "text": "Exactly. The purifier removes water and"}], "extend_dialogue": [{"character": "chief_engineer", "text": "solid impurities from the fuel."}]},
+      "audio_timing": "Cadet at 0.5–3.0s, brief pause, Chief at 3.5–11.0s; no overlap.",
+      "end_pose": "Both looking toward the nearby purifier."
+    },
+    {
+      "scene_id": "scene_03", "duration_s": 9, "state_in": "both_look_toward_nearby_purifier", "state_out": "cadet_focused_on_purifier", "chief_side": "left", "cadet_side": "right", "fuel_direction": "left_to_right", "purifier_orientation": "inlet_left_outlet_right",
+      "camera": "Fixed eye-level medium shot; no camera movement.",
+      "action": "On the motivated cut both are already beside the nearby purifier. Cadet studies it; Chief gives one small open-palm gesture. Subtle rotation is allowed, no vibration.",
+      "composition": "Purifier centered and fully inside the vertical safe area, inlet left/outlet right; Chief lower left, Cadet lower right.",
+      "dialogue": [{"character": "chief_engineer", "text": "The purifier does that by centrifugal separation."}, {"character": "tiny_cadet", "text": "So it separates the impurities from the fuel?"}],
+      "render_steps": {"base_action": "Chief gestures once toward the purifier, speaks first; Cadet studies it and asks the question.", "extend_action": "Continue the same purifier shot silently. Cadet remains focused; Chief remains ready to explain. No further mouth movement or spoken words.", "base_dialogue": [{"character": "chief_engineer", "text": "The purifier does that by centrifugal separation."}, {"character": "tiny_cadet", "text": "So it separates the impurities from the fuel?"}], "extend_dialogue": []},
+      "audio_timing": "Chief first, short pause, Cadet second; no overlap.",
+      "end_pose": "Cadet focused on purifier; Chief ready to explain."
+    },
+    {
+      "scene_id": "scene_04", "duration_s": 13, "state_in": "cadet_focused_on_purifier", "state_out": "cadet_understands_at_purifier", "chief_side": "left", "cadet_side": "right", "fuel_direction": "left_to_right", "purifier_orientation": "inlet_left_outlet_right",
+      "camera": "Fixed eye-level medium-wide shot, no movement, rack focus or zoom.",
+      "action": "Two major beats: dirty fuel entering, then cleaner fuel leaving. Continuous symbolic centrifugal separation suggests water and solid impurities removed; no literal internals or exact channels.",
+      "technical_point": "Centrifugal separation removes water and solid impurities from fuel oil so cleaner fuel can continue toward the engine.",
+      "technical_visualization": "Symbolic two-beat cutaway: dirty fuel entering; cleaner fuel leaving; continuous separation effect, no exact internals.",
+      "composition": "Symbolic purifier cutaway dominant center; Chief small at left, Cadet small at right; inlet left/outlet right.",
+      "dialogue": [{"character": "chief_engineer", "text": "Centrifugal separation removes water and solid impurities from the fuel."}, {"character": "tiny_cadet", "text": "And the cleaner fuel can continue to the engine."}],
+      "render_steps": {"base_action": "First major visual beat: dirty fuel enters. Symbolic separation is continuous; Chief says only his approved line.", "extend_action": "Second major visual beat: cleaner fuel leaves. Continue symbolic separation; Cadet says only his approved line. Keep purifier orientation identical.", "base_dialogue": [{"character": "chief_engineer", "text": "Centrifugal separation removes water and solid impurities from the fuel."}], "extend_dialogue": [{"character": "tiny_cadet", "text": "And the cleaner fuel can continue to the engine."}]},
+      "audio_timing": "Chief then Cadet sequentially, no overlap; visualization remains the priority.",
+      "end_pose": "Cadet understands; purifier orientation unchanged."
+    },
+    {
+      "scene_id": "scene_05", "duration_s": 8, "state_in": "cadet_understands_at_purifier", "state_out": "both_still_beside_purifier", "chief_side": "left", "cadet_side": "right", "fuel_direction": "left_to_right", "purifier_orientation": "inlet_left_outlet_right",
+      "camera": "Very gentle tracking pan screen-right; keep Cadet inside the central safe area.",
+      "action": "Follow the purifier outlet pipe toward the engine. Cadet follows with eyes and a small head movement, then a small realization gesture; Chief nearby. No walking away.",
+      "composition": "Fuel pipe continues left to right; both remain beside the purifier.",
+      "dialogue": [{"character": "tiny_cadet", "text": "So cleaner fuel goes to the engine."}, {"character": "chief_engineer", "text": "Correct."}],
+      "audio_timing": "Cadet then Chief; no overlap.",
+      "end_pose": "Both still beside the purifier for the interview."
+    },
+    {
+      "scene_id": "scene_06", "duration_s": 5, "state_in": "both_still_beside_purifier", "state_out": "cadet_ready_for_interview", "chief_side": "left", "cadet_side": "right", "fuel_direction": "left_to_right", "purifier_orientation": "inlet_left_outlet_right",
+      "camera": "Fixed eye-level medium two-shot; no movement.",
+      "action": "Chief turns toward Cadet, who straightens slightly and listens without speaking.",
+      "composition": "Chief left, Cadet right; same purifier softly visible behind them.",
+      "dialogue": [{"character": "chief_engineer", "text": "Interview question: What is the purpose of a fuel oil purifier?"}],
+      "audio_timing": "Chief asks clearly; Cadet does not speak.",
+      "end_pose": "Cadet ready to answer; positions held."
+    },
+    {
+      "scene_id": "scene_07", "duration_s": 12, "state_in": "cadet_ready_for_interview", "state_out": "chief_approved_cadet_answer", "chief_side": "left", "cadet_side": "right", "fuel_direction": "left_to_right", "purifier_orientation": "inlet_left_outlet_right",
+      "camera": "Fixed eye-level medium close-up emphasizing Cadet's face and mouth; no movement, zoom, reframe or purifier glance.",
+      "action": "Cadet gives the full answer confidently with subtle facial movement; Chief listens quietly and gives one small nod only after the final word.",
+      "technical_point": "A purifier removes water and solid impurities by centrifugal separation so cleaner fuel is supplied to the engine.",
+      "composition": "Cadet right and dominant; Chief left; purifier static and softly visible behind them.",
+      "dialogue": [{"character": "tiny_cadet", "text": "It removes water and solid impurities from fuel oil by centrifugal separation, so cleaner fuel is supplied to the engine."}],
+      "render_steps": {"base_action": "Cadet begins his single continuous interview answer; Chief listens without nodding. End on a natural short comma pause.", "extend_action": "Cadet completes the SAME sentence without repeating its first clause. Only after the final word Chief gives one small approving nod.", "base_dialogue": [{"character": "tiny_cadet", "text": "It removes water and solid impurities from fuel oil by centrifugal separation,"}], "extend_dialogue": [{"character": "tiny_cadet", "text": "so cleaner fuel is supplied to the engine."}]},
+      "audio_timing": "Full answer at approximately 0.5–10.5s, measured but brisk. One Chief nod at 10.8–11.6s, strictly after final word.",
+      "end_pose": "Chief has just approved; Cadet composed."
+    },
+    {
+      "scene_id": "scene_08", "duration_s": 4, "state_in": "chief_approved_cadet_answer", "state_out": "episode_resolved", "chief_side": "left", "cadet_side": "right", "fuel_direction": "left_to_right", "purifier_orientation": "inlet_left_outlet_right",
+      "camera": "Fixed eye-level medium two-shot; no movement.",
+      "action": "Chief approves calmly; Cadet relaxes, smiles with restrained confidence and makes one small nod after the pause.",
+      "composition": "Chief left, Cadet right, same purifier softly visible behind them.",
+      "dialogue": [{"character": "chief_engineer", "text": "Good answer."}],
+      "audio_timing": "Chief first; a short pause; Cadet nods without speaking.",
+      "end_pose": "Clean ending with both still near purifier."
+    }
+  ]
+}

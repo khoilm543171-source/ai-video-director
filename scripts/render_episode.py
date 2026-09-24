@@ -41,6 +41,20 @@ def main() -> int:
     )
     args = parser.parse_args()
 
+    if args.episode_id == "episode_001_fuel_oil_purifier":
+        plan_path = PROJECT_ROOT / "outputs" / "episodes" / args.episode_id / "flow_jobs" / "flow_jobs.json"
+        if not plan_path.exists():
+            parser.error("Build Episode 001 Flow jobs first: python scripts/build_flow_pack.py --episode-id episode_001_fuel_oil_purifier")
+        if args.dry_run:
+            plan = json.loads(plan_path.read_text(encoding="utf-8"))
+            chosen = [job for job in plan["jobs"] if args.all or job["scene_id"] in args.scene]
+            missing = set(args.scene or []) - {job["scene_id"] for job in chosen}
+            if missing:
+                parser.error("Unknown scene id(s): " + ", ".join(sorted(missing)))
+            print(json.dumps({"mode": "flow_manual", "jobs": chosen}, ensure_ascii=False, indent=2))
+            return 0
+        parser.error("Episode 001 needs in-scene Flow extensions and exact native dialogue. Use flow_jobs/START_HERE.md; this direct Veo API command cannot render the approved 9–13s jobs safely.")
+
     manager = RenderManager(project_root=PROJECT_ROOT)
 
     result = manager.render(
