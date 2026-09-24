@@ -119,6 +119,34 @@ def run_flow_prompt_checks(
 
 
 
+        # Dialogue scenes must not contain legacy instructions that
+        # suppress the exact native speech/lip-sync added by the Flow compiler.
+        if dialogue:
+            combined = (prompt + " " + negative).lower()
+            audio_conflicts = (
+                "no spoken dialogue audio",
+                "no dialogue audio",
+                "no spoken audio",
+                "no lip-sync",
+                "lip-sync mouth shapes for spoken words",
+            )
+            found_conflicts = [
+                term for term in audio_conflicts
+                if term in combined
+            ]
+            if found_conflicts:
+                issues.append(
+                    {
+                        "severity": "high",
+                        "scene_id": sid,
+                        "category": "audio",
+                        "finding": (
+                            "Dialogue scene contains speech/lip-sync suppression: "
+                            + ", ".join(found_conflicts)
+                        ),
+                    }
+                )
+
         refs = {
             str(item).lower()
             for item in p.get("reference_assets", [])
