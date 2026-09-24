@@ -109,6 +109,42 @@ class VeoPromptsOutput(BaseModel):
     scenes: list[VeoScenePrompt]
 
 
+class AudioVoiceCue(BaseModel):
+    character: Literal["tiny_cadet", "chief_engineer", "narrator"]
+    text: str
+    start_offset_s: float = 0.0
+    emotion: str = "neutral"
+    delivery: str = "natural"
+    paralinguistic_tags: list[str] = Field(default_factory=list)
+    reference_voice: str | None = None
+
+
+class AudioScenePlan(BaseModel):
+    scene_id: str
+    start_s: float
+    duration_s: float
+    voice: list[AudioVoiceCue] = Field(default_factory=list)
+    sfx_prompt: str
+    sfx_negative_prompt: str = "speech, dialogue, vocals, background music"
+    ambient_level: float = Field(default=0.45, ge=0, le=1)
+    sfx_level: float = Field(default=0.65, ge=0, le=1)
+
+
+class MusicPlan(BaseModel):
+    prompt: str
+    duration_s: float
+    instrumental: bool = True
+    bpm: int | None = None
+    mood_arc: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class AudioPlanOutput(BaseModel):
+    episode_id: str
+    duration_s: float
+    music: MusicPlan
+    scenes: list[AudioScenePlan]
+
+
 class EpisodeManifest(BaseModel):
     episode_id: str
     status: str
