@@ -1,0 +1,7 @@
+{
+  "episode_id": "purifier-purpose-001",
+  "question": "What is the purpose of a fuel oil purifier?",
+  "answer": "A fuel oil purifier removes water and solid impurities from fuel oil by centrifugal separation so cleaner fuel can be supplied to the engine.",
+  "source_notes": "Keep the explanation at Engine Cadet interview level. Do not invent maintenance procedures.",
+  "target_duration_s": 60
+}
