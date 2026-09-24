@@ -70,7 +70,10 @@ def main() -> int:
         "VISUAL_REVIEW_MODEL",
         "gemini-2.5-flash",
     ).strip()
-    google_genai = importlib.util.find_spec("google.genai") is not None
+    try:
+        google_genai = importlib.util.find_spec("google.genai") is not None
+    except (ModuleNotFoundError, ValueError):
+        google_genai = False
     print(f"Gemini API key         {yes_no(gemini_key)}")
     print(f"google-genai           {yes_no(google_genai)}")
     print(f"VISUAL_REVIEW_MODEL    {visual_model or 'MISSING'}")
