@@ -3,22 +3,24 @@ from __future__ import annotations
 from core.agent_runtime import run_typed_agent
 from core.llm_client import OpenAICompatibleLLM
 from core.schemas import ScriptOutput, StoryboardOutput
+from core.token_economy import (
+    minimal_character_visuals,
+    minimal_series_visuals,
+)
 
 
 SYSTEM_PROMPT = """
 You are the Storyboard Director for Tiny Engine Cadet.
-
-Convert the approved script into visually precise 9:16 scene plans for AI video generation.
+Convert the approved script into precise 9:16 scene plans.
 
 Rules:
-- Preserve exactly the script scene ids and timing.
-- Design one clear camera idea per scene.
-- Keep Tiny Cadet and Chief Engineer readable in vertical composition.
+- Preserve script scene ids and timing exactly.
+- One clear camera idea per scene.
+- Keep recurring characters readable in vertical composition.
 - Machinery must look plausible for a merchant ship engine room.
-- If a technical process is hard to see physically, describe a simple cutaway or visualized flow without distorting how the system works.
-- Avoid dense labels and tiny text because text will be handled later.
-- Maintain spatial and character continuity between adjacent scenes.
-- Do not ask the video model to invent logos, gauges with readable text, or complex UI.
+- Use a simple cutaway only when needed to explain a technical process.
+- Avoid dense labels, readable gauges, logos and complex UI.
+- Maintain spatial and character continuity.
 """
 
 
@@ -28,15 +30,33 @@ def run(
     series_bible: dict,
     character_bible: dict,
 ) -> StoryboardOutput:
+    slim_script = {
+        "title": script.title,
+        "duration_s": script.duration_s,
+        "scenes": [
+            {
+                "scene_id": s.scene_id,
+                "start_s": s.start_s,
+                "end_s": s.end_s,
+                "location": s.location,
+                "purpose": s.purpose,
+                "visual_action": s.visual_action,
+                "technical_point": s.technical_point,
+            }
+            for s in script.scenes
+        ],
+    }
+
     return run_typed_agent(
         llm,
         StoryboardOutput,
         system_prompt=SYSTEM_PROMPT,
         payload={
-            "script": script.model_dump(),
-            "series_bible": series_bible,
-            "character_bible": character_bible,
+            "script": slim_script,
+            "series": minimal_series_visuals(series_bible),
+            "characters": minimal_character_visuals(character_bible),
         },
-        temperature=0.3,
-        max_tokens=7500,
+        temperature=0.25,
+        max_tokens=4000,
+        agent_name="storyboard",
     )
