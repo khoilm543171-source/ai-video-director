@@ -183,3 +183,38 @@ def test_stage_provider_override(monkeypatch):
 
     routed = ProviderRouter().for_stage("script")
     assert routed.model.startswith("deepseek:")
+
+
+def test_routed_llm_retries_transient_error(monkeypatch):
+    from core.llm_client import LLMTransientError
+    from core.provider_router import RoutedLLM
+
+    class FakeClient:
+        base_url = "https://example.test/v1"
+        model = "fake-model"
+
+        def __init__(self):
+            self.calls = 0
+            self.last_usage = {}
+
+        def chat_json(self, *args, **kwargs):
+            self.calls += 1
+            if self.calls < 3:
+                raise LLMTransientError("Upstream temporarily unavailable")
+            self.last_usage = {
+                "prompt_tokens": 1,
+                "completion_tokens": 1,
+                "total_tokens": 2,
+            }
+            return {"ok": True}
+
+    monkeypatch.setenv("LLM_RETRY_ATTEMPTS", "3")
+    monkeypatch.setenv("LLM_RETRY_BACKOFF_SECONDS", "0")
+
+    client = FakeClient()
+    routed = RoutedLLM([client], route_name="fake")
+    result = routed.chat_json("system", "user")
+
+    assert result == {"ok": True}
+    assert client.calls == 3
+    assert routed.last_usage["total_tokens"] == 2
