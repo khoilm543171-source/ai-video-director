@@ -222,3 +222,38 @@ class VisualReviewOutput(BaseModel):
     failed_checks: list[str] = Field(default_factory=list)
     retry_prompt_delta: str = ""
     summary: str
+
+
+class FlowPromptIssue(BaseModel):
+    severity: Literal["low", "medium", "high", "critical"]
+    category: Literal[
+        "technical",
+        "dialogue_timing",
+        "character_reference",
+        "camera",
+        "continuity",
+        "audio",
+        "negative_prompt",
+        "production",
+    ]
+    scene_id: str | None = None
+    finding: str
+    evidence: str
+    repair_instruction: str
+
+
+class FlowSceneReview(BaseModel):
+    scene_id: str
+    score: int = Field(ge=0, le=100)
+    decision: Literal["PASS", "REVISE"]
+    issues: list[FlowPromptIssue] = Field(default_factory=list)
+    summary: str
+
+
+class FlowPromptReviewOutput(BaseModel):
+    overall_score: int = Field(ge=0, le=100)
+    decision: Literal["PASS", "REVISE", "BLOCK"]
+    scene_reviews: list[FlowSceneReview]
+    cross_scene_issues: list[FlowPromptIssue] = Field(default_factory=list)
+    revision_priority: list[str] = Field(default_factory=list)
+    executive_summary: str
