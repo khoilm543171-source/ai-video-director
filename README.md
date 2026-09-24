@@ -334,3 +334,53 @@ Important:
   the configured Veo model.
 - The video layer is generated separately from dialogue, Foley and background
   music. Source audio can be discarded during the later FFmpeg mix stage.
+
+## Google Flow reference prompt pack
+
+For no-billing / Flow-credit workflows, create three reusable Flow assets once:
+
+    TinyCadet
+    ChiefEngineer
+    EngineRoom
+
+Their source prompts are stored in:
+
+    config/reference_asset_prompts.json
+    config/environment_bible.json
+
+After an episode planning run reaches ready_for_render, build the Flow package:
+
+    python scripts/build_flow_pack.py --episode-id YOUR_EPISODE_ID
+
+It creates:
+
+    outputs/episodes/YOUR_EPISODE_ID/flow_jobs/
+        REFERENCE_SETUP.md
+        flow_jobs.json
+        scene_01.txt
+        scene_02.txt
+        ...
+        scene_08.txt
+
+REFERENCE_SETUP.md contains the prompts for the recurring character and
+environment ingredient images. Generate these references once in the Flow
+project and name them exactly:
+
+    TinyCadet
+    ChiefEngineer
+    EngineRoom
+
+Each scene prompt then references only the needed character assets plus the
+EngineRoom environment, so recurring identity/style instructions do not need
+to be rewritten manually for every clip.
+
+Recommended Flow sequence:
+
+    review idea.json + script.json
+    -> approve
+    -> storyboard/context/Veo prompts
+    -> build_flow_pack.py
+    -> create/load Flow ingredients
+    -> generate scene clips
+    -> save scene_XX.mp4 under the episode scenes folder
+    -> resume visual/audio/post-production pipeline
