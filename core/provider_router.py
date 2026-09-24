@@ -97,7 +97,7 @@ class ProviderRouter:
             os.getenv("LLM_FALLBACK_PROVIDER", "").lower().strip()
         )
 
-    def _config(self, provider: str) -> ProviderConfig:
+    def _configs(self, provider: str) -> list[ProviderConfig]:
         provider = provider.lower()
 
         if provider == "vilao":
@@ -112,15 +112,31 @@ class ProviderRouter:
                     "VILAO_MODEL is missing in .env. Copy the exact model ID "
                     "shown in your Vilao Marketplace/API example."
                 )
-            return ProviderConfig(
-                name="vilao",
-                base_url=os.getenv(
-                    "VILAO_BASE_URL",
-                    "https://api.vilao.ai/v1",
-                ).rstrip("/"),
-                api_key=key,
-                model=model,
-            )
+
+            fallback_models = [
+                item.strip()
+                for item in os.getenv("VILAO_FALLBACK_MODELS", "").split(",")
+                if item.strip()
+            ]
+            models = [model]
+            for item in fallback_models:
+                if item not in models:
+                    models.append(item)
+
+            base_url = os.getenv(
+                "VILAO_BASE_URL",
+                "https://api.vilao.ai/v1",
+            ).rstrip("/")
+
+            return [
+                ProviderConfig(
+                    name="vilao",
+                    base_url=base_url,
+                    api_key=key,
+                    model=item,
+                )
+                for item in models
+            ]
 
         if provider == "deepseek":
             key = (
@@ -132,18 +148,20 @@ class ProviderRouter:
                 raise LLMConfigurationError(
                     "DEEPSEEK_API_KEY is missing in .env."
                 )
-            return ProviderConfig(
-                name="deepseek",
-                base_url=os.getenv(
-                    "DEEPSEEK_BASE_URL",
-                    "https://api.deepseek.com",
-                ).rstrip("/"),
-                api_key=key,
-                model=os.getenv(
-                    "DEEPSEEK_MODEL",
-                    "deepseek-chat",
-                ).strip(),
-            )
+            return [
+                ProviderConfig(
+                    name="deepseek",
+                    base_url=os.getenv(
+                        "DEEPSEEK_BASE_URL",
+                        "https://api.deepseek.com",
+                    ).rstrip("/"),
+                    api_key=key,
+                    model=os.getenv(
+                        "DEEPSEEK_MODEL",
+                        "deepseek-chat",
+                    ).strip(),
+                )
+            ]
 
         if provider in {"generic", "openai_compatible"}:
             key = os.getenv("LLM_API_KEY", "").strip()
@@ -154,12 +172,14 @@ class ProviderRouter:
                     "Generic provider requires LLM_BASE_URL, LLM_MODEL, "
                     "and LLM_API_KEY."
                 )
-            return ProviderConfig(
-                name="generic",
-                base_url=base_url.rstrip("/"),
-                api_key=key,
-                model=model,
-            )
+            return [
+                ProviderConfig(
+                    name="generic",
+                    base_url=base_url.rstrip("/"),
+                    api_key=key,
+                    model=model,
+                )
+            ]
 
         raise LLMConfigurationError(
             f"Unknown LLM provider: {provider}. "
@@ -191,7 +211,10 @@ class ProviderRouter:
         ):
             names.append(self.fallback_provider)
 
-        configs = [self._config(name) for name in names]
+        configs: list[ProviderConfig] = []
+        for name in names:
+            configs.extend(self._configs(name))
+
         clients = [self._client(config) for config in configs]
         route_name = " -> ".join(
             f"{config.name}:{config.model}"
