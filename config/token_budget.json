@@ -19,7 +19,8 @@
     "storyboard": 4000,
     "veo_prompt_builder": 4500,
     "audio_director": 4500,
-    "content_review": 2800
+    "content_review": 2800,
+    "flow_prompt_review": 4200
   },
   "context_policy": {
     "idea": [
@@ -68,6 +69,13 @@
       "idea",
       "story",
       "script"
+    ],
+    "flow_prompt_review": [
+      "source",
+      "script",
+      "storyboard",
+      "episode_facts",
+      "veo_prompts"
     ]
   }
 }
