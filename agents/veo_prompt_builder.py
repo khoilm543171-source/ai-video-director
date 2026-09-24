@@ -13,10 +13,12 @@ Rules:
 - Preserve scene ids and durations exactly.
 - Each prompt: fixed style, characters present, environment, visible action,
   camera, composition, lighting and continuity cue.
-- No dialogue, music, subtitles or baked-in text.
+- Do not invent or paraphrase dialogue; the Flow pack attaches exact approved script dialogue later.
+- Do not add music, subtitles or baked-in text.
 - Never redesign recurring characters.
 - Prefer one primary visible action per scene.
 - Keep prompts concrete and visual.
+- Do not add "no dialogue audio" or "no lip-sync" instructions; native dialogue may be attached downstream.
 - Combine global negatives with scene-specific failure risks.
 """ + "\n\n" + compose_skills(
     "flow-video-prompt",
