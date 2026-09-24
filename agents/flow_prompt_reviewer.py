@@ -23,7 +23,8 @@ Rules:
 - The supplied EpisodeRequest answer/source_notes and Context episode_facts are the technical truth.
 - Never silently correct or add outside maritime facts.
 - Compare script, storyboard and video prompt scene by scene.
-- Dialogue must be exact, fit the scene duration, and never conflict with audio/lip-sync instructions.
+- Dialogue must be exact and fit the scene duration.
+- The downstream Flow compiler removes legacy audio-suppression phrases from old Veo prompts and appends exact approved dialogue with native lip-sync. Do not fail an otherwise valid old episode solely because a raw legacy prompt contains such a phrase; judge whether the final compiled handoff can be made unambiguous.
 - Camera instructions must be internally coherent and suitable for vertical 9:16.
 - References and continuity must remain stable across scenes.
 - Flag overloaded clips that ask for too many actions, camera moves, cutaways, and dialogue at once.
