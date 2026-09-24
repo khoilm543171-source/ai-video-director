@@ -16,18 +16,18 @@ if str(PROJECT_ROOT) not in sys.path:
 from core.state_manager import EpisodeStateManager
 
 
-TARGET_SECONDS = 60.0
+SOFT_SOFT_TARGET_SECONDS = 60.0
 MAX_WORDS_PER_SECOND = 2.55
 MIN_SCENE_SECONDS = 4.0
 
 PREFERRED_DURATIONS = {
-    "scene_1_hook": 5.5,
-    "scene_2_problem": 11.0,
-    "scene_3_observation": 7.5,
-    "scene_4_explanation": 11.0,
+    "scene_1_hook": 6.0,
+    "scene_2_problem": 12.0,
+    "scene_3_observation": 9.0,
+    "scene_4_explanation": 13.0,
     "scene_5_realization": 8.0,
-    "scene_6_interview_question": 4.0,
-    "scene_7_concise_answer": 9.0,
+    "scene_6_interview_question": 5.0,
+    "scene_7_concise_answer": 10.0,
     "scene_8_resolution": 4.0,
 }
 
@@ -72,127 +72,32 @@ def preferred_durations(script_scenes: list[dict]) -> list[float] | None:
         return None
 
     values = [PREFERRED_DURATIONS[sid] for sid in ids]
-    if abs(sum(values) - TARGET_SECONDS) > 0.01:
-        raise RuntimeError(
-            f"Preferred durations must total {TARGET_SECONDS:.1f}s, "
-            f"got {sum(values):.1f}s."
-        )
-
     minimums = [min_duration(scene) for scene in script_scenes]
 
-    # Raise any preferred slot that is below its dialogue-safe minimum,
-    # then borrow the same amount from scenes that still have slack.
-    adjusted = list(values)
-    deficit = 0.0
-    for index, minimum in enumerate(minimums):
-        if adjusted[index] < minimum:
-            deficit += minimum - adjusted[index]
-            adjusted[index] = minimum
-
-    if deficit > 0:
-        donor_order = sorted(
-            range(len(adjusted)),
-            key=lambda i: adjusted[i] - minimums[i],
-            reverse=True,
-        )
-        for index in donor_order:
-            slack = adjusted[index] - minimums[index]
-            if slack <= 0:
-                continue
-            take = min(slack, deficit)
-            # keep half-second precision
-            take = math.floor(take * 2.0) / 2.0
-            if take <= 0:
-                continue
-            adjusted[index] -= take
-            deficit -= take
-            if deficit <= 0.001:
-                break
-
-    if deficit > 0.001:
-        raise RuntimeError(
-            "Preferred 60s schedule cannot satisfy dialogue-safe minimums. "
-            f"Unresolved deficit: {deficit:.1f}s."
-        )
-
-    drift = TARGET_SECONDS - sum(adjusted)
-    if abs(drift) > 0.001:
-        donor_order = sorted(
-            range(len(adjusted)),
-            key=lambda i: adjusted[i] - minimums[i],
-            reverse=True,
-        )
-        if drift > 0:
-            adjusted[donor_order[0]] += drift
-        else:
-            remaining = -drift
-            for index in donor_order:
-                slack = adjusted[index] - minimums[index]
-                take = min(slack, remaining)
-                adjusted[index] -= take
-                remaining -= take
-                if remaining <= 0.001:
-                    break
-            if remaining > 0.001:
-                raise RuntimeError(
-                    "Could not normalize preferred schedule to exactly 60s."
-                )
-
+    # Quality-first: a preferred duration is a floor, not a hard episode cap.
+    # If approved dialogue needs more room, expand that scene instead of
+    # stealing time from another scene.
+    adjusted = [
+        max(preferred, minimum)
+        for preferred, minimum in zip(values, minimums)
+    ]
     return [round(value * 2.0) / 2.0 for value in adjusted]
-
 
 def allocate_durations(script_scenes: list[dict]) -> list[float]:
     preferred = preferred_durations(script_scenes)
     if preferred is not None:
         return preferred
-    original = [
-        float(scene["end_s"]) - float(scene["start_s"])
-        for scene in script_scenes
-    ]
-    minimums = [min_duration(scene) for scene in script_scenes]
-    minimum_total = sum(minimums)
 
-    if minimum_total > TARGET_SECONDS:
-        raise RuntimeError(
-            f"Exact approved dialogue needs at least {minimum_total:.1f}s "
-            f"at {MAX_WORDS_PER_SECOND:.2f} words/s, exceeding the "
-            f"{TARGET_SECONDS:.1f}s episode target."
+    durations: list[float] = []
+    for scene in script_scenes:
+        original = float(scene["end_s"]) - float(scene["start_s"])
+        minimum = min_duration(scene)
+        # Keep original creative pacing when it is already generous.
+        # Otherwise expand only the scene that needs more room.
+        durations.append(
+            round(max(original, minimum) * 2.0) / 2.0
         )
-
-    target = TARGET_SECONDS
-    extra = target - minimum_total
-
-    weights = [
-        max(0.5, original[i] - minimums[i] + 1.0)
-        for i in range(len(original))
-    ]
-    weight_total = sum(weights)
-
-    durations = [
-        minimums[i] + (extra * weights[i] / weight_total if weight_total else 0)
-        for i in range(len(original))
-    ]
-
-    # Use half-second precision while preserving exact total.
-    rounded = [round(value * 2) / 2 for value in durations]
-    drift = round(target - sum(rounded), 1)
-    rounded[-1] = round((rounded[-1] + drift) * 2) / 2
-
-    if rounded[-1] < MIN_SCENE_SECONDS:
-        deficit = MIN_SCENE_SECONDS - rounded[-1]
-        rounded[-1] = MIN_SCENE_SECONDS
-        for i in range(len(rounded) - 1):
-            spare = rounded[i] - minimums[i]
-            take = min(spare, deficit)
-            rounded[i] -= take
-            deficit -= take
-            if deficit <= 0:
-                break
-        if deficit > 0:
-            raise RuntimeError("Could not allocate safe scene durations.")
-
-    return rounded
-
+    return durations
 
 def replace_ci(text: str | None, old: str, new: str) -> str | None:
     if text is None:
