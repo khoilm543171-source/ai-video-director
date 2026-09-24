@@ -254,3 +254,22 @@ def test_content_review_stage_is_routable(monkeypatch):
 
     assert routed.clients[0].model == "test-model"
     assert routed.route_name == "vilao:test-model"
+
+
+def test_runtime_skills_load():
+    from core.skill_loader import load_skill
+
+    names = [
+        "camera-direction",
+        "voice-direction",
+        "sfx-foley",
+        "music-direction",
+        "flow-video-prompt",
+        "content-review",
+        "episode-orchestration",
+    ]
+
+    for name in names:
+        text = load_skill(name)
+        assert len(text) > 80
+        assert "Skill" in text
