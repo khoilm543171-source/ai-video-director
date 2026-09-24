@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from core.agent_runtime import run_typed_agent
 from core.llm_client import OpenAICompatibleLLM
+from core.skill_loader import compose_skills
 from core.schemas import (
     ContentReviewOutput,
     EpisodeRequest,
@@ -73,7 +74,7 @@ Scoring:
 - Be concise and actionable.
 - Every issue must include evidence from the provided idea/story/script and one
   concrete repair instruction.
-"""
+""" + "\n\n" + compose_skills("content-review")
 
 
 def run(
