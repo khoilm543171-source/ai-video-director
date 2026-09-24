@@ -49,6 +49,16 @@ def find_scene(items: list[dict], scene_id: str) -> dict:
     for item in items:
         if item.get("scene_id") == scene_id:
             return item
+
+    # External rendered files use stable ordinal ids (scene_01, scene_02, ...),
+    # while planning metadata may use semantic ids (scene_1_hook, ...).
+    if scene_id.startswith("scene_"):
+        suffix = scene_id.removeprefix("scene_")
+        if suffix.isdigit():
+            index = int(suffix) - 1
+            if 0 <= index < len(items):
+                return items[index]
+
     raise ValueError(f"Scene not found in metadata: {scene_id}")
 
 
