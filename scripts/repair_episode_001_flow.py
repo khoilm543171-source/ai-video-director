@@ -237,6 +237,11 @@ def patch_episode(
         )
         veo_by_id[sid]["prompt"] = clean_audio_conflicts(prompt)
 
+    if sid in board_by_id:
+        board_by_id[sid]["camera"] = (
+            "Fixed three-quarter-left angle, eye-level, locked-off; no camera movement."
+        )
+
     # scene_2_problem: dialogue-first, one simple composition, no overlay/cutaway.
     sid = "scene_2_problem"
     if sid in scenes_by_id(script):
@@ -282,31 +287,7 @@ def patch_episode(
             veo_by_id[sid]["negative_prompt"]
         )
 
-    # legacy scene_2 cleanup retained below.
-    sid = "scene_2_problem"
-    if sid in board_by_id:
-        board = board_by_id[sid]
-        board["camera"] = (
-            "Single slow eye-level dolly-in toward Tiny Cadet; no second camera move."
-        )
-        board["technical_visualization"] = None
-    if sid in veo_by_id:
-        prompt = veo_by_id[sid]["prompt"]
-        prompt = re.sub(
-            r"\s*In the upper-center safe area.*?no text labels\.",
-            "",
-            prompt,
-            flags=re.IGNORECASE,
-        )
-        prompt = replace_ci(
-            prompt,
-            "35mm natural lens, eye-level, slow dolly in toward Tiny Cadet",
-            "35mm natural lens, eye-level, one slow dolly-in toward Tiny Cadet",
-        )
-        veo_by_id[sid]["prompt"] = clean_audio_conflicts(prompt)
-        veo_by_id[sid]["negative_prompt"] = clean_negative(
-            veo_by_id[sid]["negative_prompt"]
-        )
+    # scene_2 is intentionally static after QA repair; do not reintroduce camera motion.
 
     # scene_3_observation: one camera move, realistic rotation wording.
     sid = "scene_3_observation"
@@ -394,6 +375,18 @@ def patch_episode(
             prompt,
             "denser water and solid particles pulled outward to the bowl wall",
             "water and solid impurities move outward by centrifugal separation",
+        )
+        prompt = re.sub(
+            r"fuel entering the center,\s*water and solid impurities move outward by centrifugal separation,\s*and cleaner fuel exiting from the center toward the outlet",
+            "dirty fuel entering, water and solid impurities moving outward by centrifugal separation, and cleaner fuel leaving",
+            prompt,
+            flags=re.IGNORECASE,
+        )
+        prompt = re.sub(
+            r"fuel entering the center,\s*denser water and solid particles pulled outward to the bowl wall,\s*and cleaner fuel exiting from the center toward the outlet",
+            "dirty fuel entering, water and solid impurities moving outward by centrifugal separation, and cleaner fuel leaving",
+            prompt,
+            flags=re.IGNORECASE,
         )
         veo_by_id[sid]["prompt"] = clean_audio_conflicts(prompt)
         veo_by_id[sid]["negative_prompt"] = clean_negative(
