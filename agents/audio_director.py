@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from core.agent_runtime import run_typed_agent
 from core.llm_client import OpenAICompatibleLLM
+from core.skill_loader import compose_skills
 from core.schemas import (
     AudioPlanOutput,
     ContextOutput,
@@ -22,7 +23,11 @@ Rules:
 - Engine-room ambience is believable but subtle.
 - Music is instrumental, continuous across the episode and sparse under speech.
 - Dialogue is always the mix priority.
-"""
+""" + "\n\n" + compose_skills(
+    "voice-direction",
+    "sfx-foley",
+    "music-direction",
+)
 
 
 def run(
