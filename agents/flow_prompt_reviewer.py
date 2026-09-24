@@ -136,7 +136,7 @@ def _review_chunk(
             "deterministic_checks": checks,
         },
         temperature=0.1,
-        max_tokens=2600,
+        max_tokens=6000,
         agent_name=f"flow_prompt_review_chunk_{chunk_index}",
     )
 
