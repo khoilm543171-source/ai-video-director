@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import os
+import time
 from dataclasses import dataclass
 
 from core.llm_client import (
     LLMConfigurationError,
+    LLMTransientError,
     OpenAICompatibleLLM,
 )
 
@@ -18,7 +20,7 @@ class ProviderConfig:
 
 
 class RoutedLLM:
-    """OpenAI-compatible LLM facade with provider failover."""
+    """OpenAI-compatible LLM facade with retry + provider failover."""
 
     def __init__(self, clients: list[OpenAICompatibleLLM], route_name: str):
         if not clients:
@@ -27,6 +29,14 @@ class RoutedLLM:
         self.route_name = route_name
         self.active = clients[0]
         self.last_usage: dict[str, int] = {}
+        self.retry_attempts = max(
+            1,
+            int(os.getenv("LLM_RETRY_ATTEMPTS", "3")),
+        )
+        self.retry_backoff = max(
+            0.0,
+            float(os.getenv("LLM_RETRY_BACKOFF_SECONDS", "1.5")),
+        )
 
     @property
     def model(self) -> str:
@@ -40,16 +50,30 @@ class RoutedLLM:
         errors: list[str] = []
 
         for client in self.clients:
-            try:
-                result = client.chat_json(*args, **kwargs)
-                self.active = client
-                self.last_usage = client.last_usage
-                return result
-            except Exception as exc:
-                errors.append(
-                    f"{client.base_url} / {client.model}: "
-                    f"{type(exc).__name__}: {exc}"
-                )
+            for attempt in range(1, self.retry_attempts + 1):
+                try:
+                    result = client.chat_json(*args, **kwargs)
+                    self.active = client
+                    self.last_usage = client.last_usage
+                    return result
+                except LLMTransientError as exc:
+                    errors.append(
+                        f"{client.base_url} / {client.model} "
+                        f"(attempt {attempt}/{self.retry_attempts}): "
+                        f"{type(exc).__name__}: {exc}"
+                    )
+                    if attempt < self.retry_attempts:
+                        time.sleep(
+                            self.retry_backoff * (2 ** (attempt - 1))
+                        )
+                        continue
+                    break
+                except Exception as exc:
+                    errors.append(
+                        f"{client.base_url} / {client.model}: "
+                        f"{type(exc).__name__}: {exc}"
+                    )
+                    break
 
         raise RuntimeError(
             "All configured LLM providers failed:\n- "
