@@ -7,6 +7,7 @@ from agents import (
     audio_director,
     content_reviewer,
     context_builder,
+    flow_prompt_reviewer,
     idea_agent,
     script_agent,
     story_agent,
@@ -145,6 +146,29 @@ class EpisodePipeline:
                 "veo_prompts",
                 veo_prompts.model_dump(),
             )
+
+            stage = "flow_prompt_review"
+            flow_review = flow_prompt_reviewer.run(
+                self._llm("flow_prompt_review"),
+                request,
+                script,
+                storyboard,
+                context,
+                veo_prompts,
+            )
+            self.state.save_stage(
+                manifest,
+                "flow_prompt_review",
+                flow_review.model_dump(),
+                filename="flow_prompt_review.json",
+            )
+
+            if flow_review.decision != "PASS":
+                manifest.status = "needs_flow_prompt_revision"
+                manifest.current_stage = "flow_prompt_review"
+                manifest.error = None
+                self.state.save_manifest(manifest)
+                return manifest
 
             stage = "audio_plan"
             audio_plan = audio_director.run(
