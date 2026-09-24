@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from core.agent_runtime import run_typed_agent
-from core.llm_client import OpenAICompatibleLLM
 from core.flow_prompt_checks import run_flow_prompt_checks
+from core.llm_client import OpenAICompatibleLLM
 from core.schemas import (
     ContextOutput,
     EpisodeRequest,
@@ -28,6 +28,7 @@ Rules:
 - Camera instructions must be internally coherent and suitable for vertical 9:16.
 - References and continuity must remain stable across scenes.
 - Flag overloaded clips that ask for too many actions, camera moves, cutaways, and dialogue at once.
+- Treat deterministic_checks as mandatory evidence; high/critical findings block PASS.
 - PASS only when every scene is batch-safe and no high/critical issue exists.
 """ + "\n\n" + compose_skills("flow-prompt-review")
 
@@ -67,3 +68,17 @@ def run(
         max_tokens=4200,
         agent_name="flow_prompt_review",
     )
+
+    blocking = any(
+        item.get("severity") in {"high", "critical"}
+        for item in deterministic_checks
+    )
+    if review.decision == "PASS" and blocking:
+        review.decision = "REVISE"
+        review.executive_summary = (
+            review.executive_summary
+            + " Deterministic preflight found blocking issues; "
+            "the batch is not safe to generate yet."
+        )
+
+    return review
