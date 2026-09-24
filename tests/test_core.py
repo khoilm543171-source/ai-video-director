@@ -268,6 +268,7 @@ def test_runtime_skills_load():
         "content-review",
         "episode-orchestration",
         "visual-review",
+        "flow-prompt-review",
     ]
 
     for name in names:
@@ -300,3 +301,61 @@ def test_visual_review_schema():
 
     assert review.decision == "PASS"
     assert review.scene_id == "scene_01"
+
+
+def test_flow_prompt_checks_flag_overstuffed_dialogue():
+    from core.flow_prompt_checks import run_flow_prompt_checks
+
+    script = {
+        "scenes": [
+            {
+                "scene_id": "scene_01",
+                "start_s": 0,
+                "end_s": 4,
+                "dialogue": [
+                    {
+                        "character": "tiny_cadet",
+                        "text": "one two three four five six seven eight nine ten eleven twelve thirteen",
+                    }
+                ],
+            }
+        ]
+    }
+    storyboard = {"scenes": [{"scene_id": "scene_01"}]}
+    veo_prompts = {
+        "scenes": [
+            {
+                "scene_id": "scene_01",
+                "duration_s": 4,
+                "prompt": "Cadet speaks beside the purifier.",
+                "negative_prompt": "extra limbs",
+                "reference_assets": [
+                    "assets/characters/tiny_cadet.png",
+                ],
+            }
+        ]
+    }
+
+    issues = run_flow_prompt_checks(
+        script=script,
+        storyboard=storyboard,
+        veo_prompts=veo_prompts,
+    )
+
+    assert any(
+        item["category"] == "dialogue_timing"
+        for item in issues
+    )
+
+
+def test_flow_prompt_review_stage_is_routable(monkeypatch):
+    from core.provider_router import ProviderRouter
+
+    monkeypatch.setenv("LLM_PROVIDER", "vilao")
+    monkeypatch.setenv("LLM_FALLBACK_PROVIDER", "")
+    monkeypatch.setenv("VILAO_API_KEY", "test-key")
+    monkeypatch.setenv("VILAO_MODEL", "test-model")
+
+    routed = ProviderRouter().for_stage("flow_prompt_review")
+
+    assert routed.clients[0].model == "test-model"
