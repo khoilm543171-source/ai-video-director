@@ -154,3 +154,37 @@ class EpisodeManifest(BaseModel):
     current_stage: str | None = None
     files: dict[str, str] = Field(default_factory=dict)
     error: str | None = None
+
+
+class ReviewIssue(BaseModel):
+    severity: Literal["low", "medium", "high", "critical"]
+    category: Literal[
+        "technical",
+        "story",
+        "learning",
+        "production",
+        "consistency",
+    ]
+    scene_id: str | None = None
+    finding: str
+    evidence: str
+    repair_instruction: str
+
+
+class ReviewLensScore(BaseModel):
+    score: int = Field(ge=0, le=100)
+    reason: str
+
+
+class ContentReviewOutput(BaseModel):
+    technical: ReviewLensScore
+    story_retention: ReviewLensScore
+    interview_learning: ReviewLensScore
+    production_feasibility: ReviewLensScore
+    consistency: ReviewLensScore
+    overall_score: int = Field(ge=0, le=100)
+    decision: Literal["PASS", "REVISE", "BLOCK"]
+    strengths: list[str] = Field(default_factory=list)
+    issues: list[ReviewIssue] = Field(default_factory=list)
+    revision_priority: list[str] = Field(default_factory=list)
+    executive_summary: str
