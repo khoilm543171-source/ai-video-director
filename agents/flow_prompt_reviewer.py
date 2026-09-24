@@ -141,6 +141,73 @@ def _review_chunk(
     )
 
 
+def _review_chunk_adaptive(
+    llm: OpenAICompatibleLLM,
+    *,
+    source: dict,
+    episode_facts: list[str],
+    all_scenes: list[dict],
+    scenes: list[dict],
+    deterministic_checks: list[dict],
+    label: str,
+) -> list[FlowPromptReviewOutput]:
+    start = all_scenes.index(scenes[0])
+    end = start + len(scenes)
+    previous_scene = all_scenes[start - 1] if start > 0 else None
+    next_scene = all_scenes[end] if end < len(all_scenes) else None
+
+    try:
+        review = _review_chunk(
+            llm,
+            source=source,
+            episode_facts=episode_facts,
+            scenes=scenes,
+            deterministic_checks=deterministic_checks,
+            previous_scene=previous_scene,
+            next_scene=next_scene,
+            chunk_index=label,
+        )
+        return [review]
+    except ValueError as exc:
+        message = str(exc)
+        if (
+            "prompt estimate" not in message
+            or "LLM_PROMPT_TOKEN_BUDGET" not in message
+            or len(scenes) <= 1
+        ):
+            raise
+
+        midpoint = (len(scenes) + 1) // 2
+        left = scenes[:midpoint]
+        right = scenes[midpoint:]
+
+        reviews: list[FlowPromptReviewOutput] = []
+        reviews.extend(
+            _review_chunk_adaptive(
+                llm,
+                source=source,
+                episode_facts=episode_facts,
+                all_scenes=all_scenes,
+                scenes=left,
+                deterministic_checks=deterministic_checks,
+                label=f"{label}a",
+            )
+        )
+        if right:
+            reviews.extend(
+                _review_chunk_adaptive(
+                    llm,
+                    source=source,
+                    episode_facts=episode_facts,
+                    all_scenes=all_scenes,
+                    scenes=right,
+                    deterministic_checks=deterministic_checks,
+                    label=f"{label}b",
+                )
+            )
+        return reviews
+
+
 def _merge_reviews(
     reviews: list[FlowPromptReviewOutput],
     deterministic_checks: list[dict],
@@ -242,21 +309,15 @@ def run(
 
     reviews: list[FlowPromptReviewOutput] = []
     for index, chunk in enumerate(chunks, start=1):
-        start = compact_scenes.index(chunk[0])
-        end = start + len(chunk)
-        previous_scene = compact_scenes[start - 1] if start > 0 else None
-        next_scene = compact_scenes[end] if end < len(compact_scenes) else None
-
-        reviews.append(
-            _review_chunk(
+        reviews.extend(
+            _review_chunk_adaptive(
                 llm,
                 source=source,
                 episode_facts=context.episode_facts,
+                all_scenes=compact_scenes,
                 scenes=chunk,
                 deterministic_checks=deterministic_checks,
-                previous_scene=previous_scene,
-                next_scene=next_scene,
-                chunk_index=index,
+                label=str(index),
             )
         )
 
