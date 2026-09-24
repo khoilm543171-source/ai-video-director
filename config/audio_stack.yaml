@@ -1,0 +1,57 @@
+version: 1
+
+services:
+  character_voice:
+    provider: chatterbox
+    repo: resemble-ai/chatterbox
+    commit: 5de7a54aa4e5e2baadb0182dde554908b48b85c2
+    mode: local_service
+    endpoint: http://127.0.0.1:8890
+    notes:
+      - primary voice engine for Tiny Cadet and Chief Engineer
+      - keep one reference voice file per recurring character
+
+  voice_fallback:
+    provider: kokoro_fastapi
+    repo: remsky/Kokoro-FastAPI
+    commit: b4ef64b1ce60682debda4fe0a066259e284eb1b4
+    mode: openai_compatible_api
+    endpoint: http://127.0.0.1:8880/v1
+
+  foley:
+    provider: mmaudio
+    repo: hkchengrex/MMAudio
+    commit: 974010a026c731054592d8f777218bd9d85a6c24
+    mode: local_service
+    endpoint: http://127.0.0.1:8891
+    default_model: large_44k_v2
+    rules:
+      - generate after the scene video exists
+      - prompt for environmental and action sounds only
+      - explicitly request no speech and no background music
+
+  music:
+    provider: ace_step
+    repo: ace-step/ACE-Step-1.5
+    commit: ca1e85fe9430179831e6bc6be790c332190a3866
+    mode: rest_api
+    endpoint: http://127.0.0.1:8001
+    rules:
+      - one continuous instrumental bed per episode
+      - no vocals unless explicitly requested
+      - default duration_seconds: 60
+
+mix:
+  engine: ffmpeg
+  target_lufs: -14
+  true_peak_db: -1.0
+  dialogue_gain_db: 0
+  sfx_gain_db: -8
+  music_gain_db: -22
+  duck_music_under_dialogue: true
+
+license_notes:
+  - Chatterbox source: MIT
+  - Kokoro-FastAPI source: Apache-2.0
+  - MMAudio source: MIT; pretrained model/dataset commercial suitability requires separate review
+  - ACE-Step-1.5 source: MIT; review model-card terms before commercial publishing
