@@ -300,7 +300,7 @@ def run(
         "target_duration_s": request.target_duration_s,
     }
 
-    chunk_size = 2
+    chunk_size = 1
     chunks = [
         compact_scenes[index : index + chunk_size]
         for index in range(0, len(compact_scenes), chunk_size)
