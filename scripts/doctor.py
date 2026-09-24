@@ -34,7 +34,7 @@ def main() -> int:
 
     print(f"LLM provider : {provider}")
     print(f"Fallback     : {fallback or 'disabled'}")
-    print(f"Retry attempts: {os.getenv('LLM_RETRY_ATTEMPTS', '3')}")
+    print(f"Retry attempts: {os.getenv('LLM_RETRY_ATTEMPTS', '2')}")
     print(f"Retry backoff : {os.getenv('LLM_RETRY_BACKOFF_SECONDS', '1.5')}s")
 
     problems: list[str] = []
@@ -57,6 +57,10 @@ def main() -> int:
         )
         print(f"Vilao key    : {masked(os.getenv('VILAO_API_KEY'))}")
         print(f"Vilao model  : {os.getenv('VILAO_MODEL') or 'MISSING'}")
+        print(
+            "Vilao fallbacks: "
+            + (os.getenv("VILAO_FALLBACK_MODELS") or "none")
+        )
         if not os.getenv("VILAO_API_KEY"):
             problems.append("Add VILAO_API_KEY to .env")
         if not os.getenv("VILAO_MODEL"):
