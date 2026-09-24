@@ -384,3 +384,42 @@ Recommended Flow sequence:
     -> generate scene clips
     -> save scene_XX.mp4 under the episode scenes folder
     -> resume visual/audio/post-production pipeline
+
+## Episode 001 quick launch
+
+Episode 001 is the Fuel Oil Purifier Engine Cadet interview short.
+
+Input:
+
+    examples/episode_001_fuel_oil_purifier.json
+
+On Windows, after pulling the latest repository and installing dependencies:
+
+    powershell -ExecutionPolicy Bypass -File .\scripts\start_episode_001.ps1
+
+The launcher:
+1. runs offline tests,
+2. checks pipeline readiness,
+3. smoke-tests the planning LLM,
+4. generates/reuses Episode 001,
+5. respects the Content Review gate,
+6. builds the Google Flow prompt pack.
+
+The launcher intentionally stops before spending Flow credits.
+
+Render only scene_01 first from:
+
+    outputs\episodes\episode_001_fuel_oil_purifier\flow_jobs\scene_01.txt
+
+Save the result as:
+
+    outputs\episodes\episode_001_fuel_oil_purifier\scenes\scene_01.mp4
+
+Then run the full-video multimodal Visual Reviewer:
+
+    python scripts/visual_doctor.py
+    python scripts/review_scene.py --episode-id episode_001_fuel_oil_purifier --scene scene_01
+
+Visual Review sends the complete short MP4 plus approved script/storyboard/context
+to Gemini multimodal and requests a structured VisualReviewOutput. It does not
+convert the video to source code. The result is saved under visual_reviews/.
