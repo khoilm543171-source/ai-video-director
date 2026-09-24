@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "strategy": "minimal_stage_context",
+  "context_builder_llm": false,
+  "cache": {
+    "enabled_by_default": true,
+    "directory": ".cache/llm",
+    "key": "sha256(model + agent + system_prompt + compact_payload + temperature)"
+  },
+  "input_budget": {
+    "estimated_tokens_per_agent": 6000,
+    "behavior": "fail_fast_and_reduce_context",
+    "note": "This is a local rough estimate, not provider billing."
+  },
+  "output_caps": {
+    "idea": 1200,
+    "story": 2200,
+    "script": 3500,
+    "storyboard": 4000,
+    "veo_prompt_builder": 4500,
+    "audio_director": 4500
+  },
+  "context_policy": {
+    "idea": [
+      "question",
+      "answer",
+      "source_notes",
+      "duration"
+    ],
+    "story": [
+      "question",
+      "answer",
+      "source_notes",
+      "idea_summary"
+    ],
+    "script": [
+      "question",
+      "answer",
+      "technical_truths",
+      "story"
+    ],
+    "storyboard": [
+      "slim_script",
+      "series_visuals",
+      "character_visuals"
+    ],
+    "context_builder": [
+      "deterministic_no_llm"
+    ],
+    "veo_prompt_builder": [
+      "timing",
+      "storyboard",
+      "compact_context",
+      "reference_assets"
+    ],
+    "audio_director": [
+      "dialogue_timing",
+      "visible_actions",
+      "machinery",
+      "voice_direction",
+      "audio_direction"
+    ]
+  }
+}
