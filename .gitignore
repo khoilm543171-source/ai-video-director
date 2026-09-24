@@ -1,0 +1,13 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+vendor/
+outputs/
+models/
+cache/
+*.wav
+*.flac
+*.mp3
+*.mp4
+.DS_Store
