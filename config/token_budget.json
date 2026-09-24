@@ -18,7 +18,8 @@
     "script": 3500,
     "storyboard": 4000,
     "veo_prompt_builder": 4500,
-    "audio_director": 4500
+    "audio_director": 4500,
+    "content_review": 2800
   },
   "context_policy": {
     "idea": [
@@ -59,6 +60,14 @@
       "machinery",
       "voice_direction",
       "audio_direction"
+    ],
+    "content_review": [
+      "question",
+      "answer",
+      "source_notes",
+      "idea",
+      "story",
+      "script"
     ]
   }
 }
