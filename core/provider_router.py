@@ -96,6 +96,7 @@ class ProviderRouter:
         "idea",
         "story",
         "script",
+        "content_review",
         "storyboard",
         "veo_prompt_builder",
         "audio_director",
