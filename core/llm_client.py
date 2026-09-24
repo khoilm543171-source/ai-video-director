@@ -23,6 +23,10 @@ class LLMResponseError(RuntimeError):
     pass
 
 
+class LLMTransientError(LLMResponseError):
+    """Retryable provider/upstream failure."""
+
+
 class OpenAICompatibleLLM:
     """Minimal OpenAI-compatible client for JSON-first agents."""
 
@@ -60,8 +64,8 @@ class OpenAICompatibleLLM:
                 )
             else:
                 hint = (
-                    f".env exists at {ENV_PATH}, but LLM_API_KEY and "
-                    "DEEPSEEK_API_KEY are empty or missing."
+                    f".env exists at {ENV_PATH}, but the selected provider "
+                    "API key is empty or missing."
                 )
             raise LLMConfigurationError(hint)
 
@@ -84,15 +88,26 @@ class OpenAICompatibleLLM:
             "stream": False,
         }
 
-        response = requests.post(
-            f"{self.base_url}/chat/completions",
-            headers={
-                "Authorization": f"Bearer {self.api_key}",
-                "Content-Type": "application/json",
-            },
-            json=payload,
-            timeout=self.timeout_s,
-        )
+        try:
+            response = requests.post(
+                f"{self.base_url}/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {self.api_key}",
+                    "Content-Type": "application/json",
+                },
+                json=payload,
+                timeout=self.timeout_s,
+            )
+        except (requests.Timeout, requests.ConnectionError) as exc:
+            raise LLMTransientError(
+                f"Temporary network error calling {self.base_url}: {exc}"
+            ) from exc
+
+        if response.status_code == 429 or response.status_code >= 500:
+            raise LLMTransientError(
+                f"LLM temporary HTTP error ({response.status_code}): "
+                f"{response.text[:1200]}"
+            )
 
         if response.status_code >= 400:
             raise LLMResponseError(
@@ -100,7 +115,51 @@ class OpenAICompatibleLLM:
                 f"{response.text[:1200]}"
             )
 
-        body = response.json()
+        try:
+            body = response.json()
+        except ValueError as exc:
+            raise LLMTransientError(
+                f"Provider returned non-JSON response: {response.text[:1200]}"
+            ) from exc
+
+        if isinstance(body, dict) and body.get("error"):
+            error = body["error"]
+            message = (
+                error.get("message")
+                if isinstance(error, dict)
+                else str(error)
+            ) or "Unknown provider error"
+            error_type = (
+                error.get("type", "")
+                if isinstance(error, dict)
+                else ""
+            )
+            lowered = f"{message} {error_type}".lower()
+
+            transient_markers = (
+                "temporarily",
+                "temporary",
+                "upstream",
+                "overloaded",
+                "timeout",
+                "timed out",
+                "rate limit",
+                "rate_limit",
+                "unavailable",
+                "server error",
+                "api_error",
+            )
+
+            exc_type = (
+                LLMTransientError
+                if any(marker in lowered for marker in transient_markers)
+                else LLMResponseError
+            )
+            raise exc_type(
+                f"Provider error: {message}"
+                + (f" (type={error_type})" if error_type else "")
+            )
+
         usage = body.get("usage") or {}
         self.last_usage = {
             "prompt_tokens": int(usage.get("prompt_tokens") or 0),
