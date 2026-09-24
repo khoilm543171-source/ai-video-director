@@ -267,9 +267,36 @@ def test_runtime_skills_load():
         "flow-video-prompt",
         "content-review",
         "episode-orchestration",
+        "visual-review",
     ]
 
     for name in names:
         text = load_skill(name)
         assert len(text) > 80
         assert "Skill" in text
+
+
+def test_visual_review_schema():
+    from core.schemas import VisualReviewOutput
+
+    review = VisualReviewOutput.model_validate(
+        {
+            "scene_id": "scene_01",
+            "character_consistency": 95,
+            "story_match": 92,
+            "maritime_accuracy": 90,
+            "camera_quality": 88,
+            "artifact_quality": 96,
+            "continuity": 91,
+            "overall_score": 92,
+            "confidence": 0.9,
+            "decision": "PASS",
+            "issues": [],
+            "failed_checks": [],
+            "retry_prompt_delta": "",
+            "summary": "Scene is usable.",
+        }
+    )
+
+    assert review.decision == "PASS"
+    assert review.scene_id == "scene_01"
