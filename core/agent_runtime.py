@@ -42,12 +42,17 @@ def run_typed_agent(
 
     estimated_input_tokens = rough_token_estimate(system_prompt + user_prompt)
     soft_budget = int(os.getenv("LLM_PROMPT_TOKEN_BUDGET", "6000"))
+    budget_mode = os.getenv(
+        "LLM_PROMPT_BUDGET_MODE",
+        "soft",
+    ).strip().lower()
+    over_soft_budget = estimated_input_tokens > soft_budget
 
-    if estimated_input_tokens > soft_budget:
+    if over_soft_budget and budget_mode == "hard":
         raise ValueError(
             f"{name} prompt estimate {estimated_input_tokens} tokens exceeds "
-            f"LLM_PROMPT_TOKEN_BUDGET={soft_budget}. Reduce context instead of "
-            "sending a larger window."
+            f"LLM_PROMPT_TOKEN_BUDGET={soft_budget}. "
+            "Set LLM_PROMPT_BUDGET_MODE=soft to allow it, or reduce context."
         )
 
     cache = LLMCache()
@@ -70,6 +75,8 @@ def run_typed_agent(
                 "provider_prompt_tokens": 0,
                 "provider_completion_tokens": 0,
                 "provider_total_tokens": 0,
+                "soft_budget_tokens": soft_budget,
+                "over_soft_budget": over_soft_budget,
             }
         )
         return output_model.model_validate(cached)
@@ -93,6 +100,8 @@ def run_typed_agent(
             "provider_prompt_tokens": int(usage.get("prompt_tokens") or 0),
             "provider_completion_tokens": int(usage.get("completion_tokens") or 0),
             "provider_total_tokens": int(usage.get("total_tokens") or 0),
+            "soft_budget_tokens": soft_budget,
+            "over_soft_budget": over_soft_budget,
         }
     )
 
