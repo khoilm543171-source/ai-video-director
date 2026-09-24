@@ -1,0 +1,22 @@
+{
+  "series_name": "Tiny Engine Cadet",
+  "format": "vertical_short",
+  "aspect_ratio": "9:16",
+  "target_duration_s": 60,
+  "target_resolution": "1080x1920",
+  "visual_style": "tiny cute stylized 3D animation, miniature proportions, cinematic but readable, warm educational tone, physically believable ship machinery",
+  "audience": "Engine Cadet candidates preparing for maritime interviews",
+  "story_rule": "Every episode starts from one interview question and teaches the answer through a small engine-room story.",
+  "teaching_rule": "Technical accuracy has priority over comedy. Never invent machinery behavior to create drama.",
+  "continuity_rules": [
+    "Recurring characters keep the same face, body proportions, clothing, helmet and voice identity across episodes.",
+    "The engine-room visual language stays consistent across episodes.",
+    "Every scene must serve either story progression or technical explanation.",
+    "The final 10-15 seconds must surface the interview question and a concise model answer."
+  ],
+  "audio_direction": {
+    "music": "playful cinematic miniature adventure, light percussion, subtle industrial texture, warm educational mood, instrumental only",
+    "ambience": "merchant ship engine-room room tone, low machinery hum, ventilation and metal resonance when visually appropriate",
+    "mix_priority": "dialogue > important synchronized SFX > ambience > music"
+  }
+}
