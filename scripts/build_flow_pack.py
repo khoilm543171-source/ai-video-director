@@ -31,6 +31,62 @@ ASSET_RULES = {
     ),
 }
 
+CHARACTER_LABELS = {
+    "tiny_cadet": "Tiny Cadet",
+    "chief_engineer": "Chief Engineer",
+    "narrator": "Narrator",
+}
+
+
+def clean_core_prompt(value: str) -> str:
+    text = value.strip()
+    for phrase in (
+        "No spoken dialogue audio.",
+        "No dialogue audio.",
+        "No spoken audio.",
+    ):
+        text = text.replace(phrase, "")
+    return " ".join(text.split())
+
+
+def clean_negative_prompt(value: str) -> str:
+    remove = {
+        "dialogue audio",
+        "speech",
+        "vocals",
+        "lip-sync mouth shapes for spoken words",
+    }
+    parts = [part.strip() for part in value.split(",") if part.strip()]
+    return ", ".join(part for part in parts if part.lower() not in remove)
+
+
+def dialogue_block(script_scene: dict) -> list[str]:
+    dialogue = script_scene.get("dialogue", [])
+    if not dialogue:
+        return [
+            "No spoken dialogue in this scene.",
+            "Generate only subtle synchronized engine-room ambience; no music.",
+        ]
+
+    lines = [
+        "Generate native synchronized dialogue audio with natural lip-sync.",
+        "Use the exact approved words below. Do not paraphrase, add filler, or invent narration.",
+        "Keep each recurring character's voice identity consistent across scenes.",
+        "Keep engine-room ambience subtle under speech. No background music.",
+        "",
+    ]
+    for item in dialogue:
+        character = item.get("character", "narrator")
+        label = CHARACTER_LABELS.get(character, character)
+        spoken = str(item.get("text") or "").strip()
+        emotion = str(item.get("emotion") or "neutral").strip()
+        delivery = str(item.get("delivery") or "natural").strip()
+        if spoken:
+            lines.append(
+                f'- {label} [{emotion}; {delivery}]: "{spoken}"'
+            )
+    return lines
+
 
 def load_json(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
@@ -73,8 +129,10 @@ def build_scene_prompt(
         reference_lines.append(ASSET_RULES["chief_engineer"])
 
     duration = scene_prompt.get("duration_s")
-    core_prompt = scene_prompt["prompt"].strip()
-    negative = scene_prompt.get("negative_prompt", "").strip()
+    core_prompt = clean_core_prompt(scene_prompt["prompt"])
+    negative = clean_negative_prompt(
+        scene_prompt.get("negative_prompt", "")
+    )
 
     lines = [
         "FLOW / VEO SCENE PROMPT",
@@ -82,12 +140,18 @@ def build_scene_prompt(
         "REFERENCES / INGREDIENTS:",
         *[f"- {line}" for line in reference_lines],
         "",
-        "SHOT:",
+        "VIDEO:",
         core_prompt,
         "",
-        f"Target duration: {duration} seconds.",
-        "Native vertical 9:16 composition.",
-        "No subtitles or baked-in text.",
+        "DIALOGUE / NATIVE AUDIO:",
+        *dialogue_block(script_scene),
+        "",
+        "OUTPUT:",
+        f"- Target duration: {duration} seconds.",
+        "- Native vertical 9:16 composition.",
+        "- One video output for the calibration pass.",
+        "- No subtitles, captions, or baked-in text.",
+        "- No background music.",
     ]
 
     if negative:
@@ -266,6 +330,7 @@ def main() -> int:
                 "expected_video": str(
                     episode_dir / "scenes" / f"{scene_id}.mp4"
                 ),
+                "dialogue": script_scene.get("dialogue", []),
                 "references": [
                     "EngineRoom",
                     *(
@@ -286,28 +351,63 @@ def main() -> int:
         PROJECT_ROOT / "config" / "reference_asset_prompts.json"
     )
 
-    setup_lines = [
-        "# Flow reference setup",
-        "",
-        "Create these reusable assets once in the same Flow project.",
-        "After generation, name them exactly as shown.",
-        "",
-    ]
+    reference_files = []
+    for idx, (asset_name, asset) in enumerate(
+        reference_config["assets"].items(),
+        start=1,
+    ):
+        filename = f"reference_{idx:02d}_{asset_name}.txt"
+        reference_text = (
+            f"FLOW REFERENCE ASSET: {asset_name}\n\n"
+            f"{asset['prompt']}\n\n"
+            f"AVOID:\n{asset['avoid']}\n"
+        )
+        (flow_dir / filename).write_text(
+            reference_text,
+            encoding="utf-8",
+        )
+        reference_files.append((asset_name, filename))
 
-    for asset_name, asset in reference_config["assets"].items():
-        setup_lines.extend(
-            [
-                f"## {asset_name}",
-                "",
-                asset["prompt"],
-                "",
-                f"Avoid: {asset['avoid']}",
-                "",
-            ]
+    setup_lines = [
+        "# Google Flow — START HERE",
+        "",
+        "This folder is the complete manual Flow handoff. Do not rewrite prompts by hand.",
+        "",
+        "## One-time reference setup",
+        "Create these three reusable image assets once in the same Flow project:",
+    ]
+    for asset_name, filename in reference_files:
+        setup_lines.append(
+            f"- {asset_name}: copy-paste the full contents of {filename}"
         )
 
+    setup_lines.extend(
+        [
+            "",
+            "Name the resulting assets exactly: TinyCadet, ChiefEngineer, EngineRoom.",
+            "",
+            "## Render scene_01",
+            "1. Open the Flow project on desktop.",
+            "2. Go to Scenes / Cảnh.",
+            "3. Add/select the references named in scene_01.txt using @ references or ingredients.",
+            "4. Paste the full contents of scene_01.txt into the prompt box.",
+            "5. Select vertical 9:16, one output, and a compatible video model.",
+            "6. Generate only scene_01 for calibration.",
+            "7. Download it as scenes/scene_01.mp4.",
+            "8. Run the Visual Reviewer before scenes 02-08.",
+            "",
+            "Each scene prompt already includes exact approved dialogue when dialogue exists.",
+            "Do not manually paraphrase or add lines in Flow.",
+        ]
+    )
+
+    start_here = "\n".join(setup_lines) + "\n"
+    (flow_dir / "START_HERE.md").write_text(
+        start_here,
+        encoding="utf-8",
+    )
     (flow_dir / "REFERENCE_SETUP.md").write_text(
-        "\n".join(setup_lines),
+        start_here,
         encoding="utf-8",
     )
 
@@ -315,6 +415,7 @@ def main() -> int:
         json.dumps(
             {
                 "episode_id": episode_id,
+                "native_dialogue_audio": True,
                 "flow_assets": [
                     "TinyCadet",
                     "ChiefEngineer",
@@ -330,7 +431,7 @@ def main() -> int:
 
     print(f"Flow prompt pack created: {flow_dir}")
     print(f"Scenes: {len(index)}")
-    print("Create references from REFERENCE_SETUP.md once, then use scene_*.txt.")
+    print("Open START_HERE.md, create the 3 references once, then render scene_01.")
     return 0
 
 
