@@ -99,6 +99,7 @@ class ProviderRouter:
         "content_review",
         "storyboard",
         "veo_prompt_builder",
+        "flow_prompt_review",
         "audio_director",
     }
 
