@@ -8,18 +8,15 @@ from core.schemas import ContextOutput, ScriptOutput, StoryboardOutput, VeoPromp
 SYSTEM_PROMPT = """
 You are the Video Prompt Compiler for Tiny Engine Cadet.
 
-Turn each storyboard scene into a concise, production-ready visual prompt for a modern text/image-to-video model.
-
 Rules:
 - Preserve scene ids and durations exactly.
-- Each prompt must contain: recurring visual style, characters present, environment, visible action, camera movement, composition, lighting, and continuity cue.
-- Do not generate spoken dialogue or music instructions. Audio is produced by separate agents.
-- Do not request subtitles or text baked into the video.
-- Reference the fixed character identity instead of redesigning the character.
-- Prefer one primary action per scene.
-- Keep prompts concrete and visual instead of poetic.
-- Negative prompts should combine global negatives with scene-specific failure risks.
-- reference_assets may contain stable logical paths such as assets/characters/tiny_cadet.png even if the files are not created yet.
+- Each prompt: fixed style, characters present, environment, visible action,
+  camera, composition, lighting and continuity cue.
+- No dialogue, music, subtitles or baked-in text.
+- Never redesign recurring characters.
+- Prefer one primary visible action per scene.
+- Keep prompts concrete and visual.
+- Combine global negatives with scene-specific failure risks.
 """
 
 
@@ -29,20 +26,37 @@ def run(
     storyboard: StoryboardOutput,
     context: ContextOutput,
 ) -> VeoPromptsOutput:
+    scene_timing = [
+        {
+            "scene_id": s.scene_id,
+            "start_s": s.start_s,
+            "end_s": s.end_s,
+        }
+        for s in script.scenes
+    ]
+
+    compact_context = {
+        "global_visual_prompt": context.global_visual_prompt,
+        "negative_prompt": context.negative_prompt,
+        "characters": context.characters,
+        "episode_facts": context.episode_facts,
+    }
+
     return run_typed_agent(
         llm,
         VeoPromptsOutput,
         system_prompt=SYSTEM_PROMPT,
         payload={
-            "script": script.model_dump(),
+            "timing": scene_timing,
             "storyboard": storyboard.model_dump(),
-            "context": context.model_dump(),
-            "available_reference_assets": [
+            "context": compact_context,
+            "reference_assets": [
                 "assets/characters/tiny_cadet.png",
                 "assets/characters/chief_engineer.png",
                 "assets/environments/engine_room.png",
             ],
         },
-        temperature=0.25,
-        max_tokens=8000,
+        temperature=0.2,
+        max_tokens=4500,
+        agent_name="veo_prompt_builder",
     )
