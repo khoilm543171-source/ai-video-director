@@ -497,7 +497,7 @@ def main() -> int:
             "",
             "CRITICAL OUTPUT INSTRUCTION:",
             f"- Create exactly {len(batch_sections)} SEPARATE video clips.",
-            "- DO NOT create one continuous 60-second video.",
+            "- DO NOT create one continuous full-episode video.",
             "- DO NOT merge, blend, crossfade, or extend across clip boundaries.",
             "- Each numbered clip is an independent generation job.",
             "- Respect the exact duration written for each clip.",
