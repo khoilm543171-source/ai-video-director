@@ -196,6 +196,23 @@ def main() -> int:
     script_data = load_json(script_path)
     veo_data = load_json(veo_path)
 
+    veo_scenes = veo_data.get("scenes", [])
+    print(f"Veo prompt source: {veo_path}")
+    print(f"Veo scenes found : {len(veo_scenes)}")
+    if not veo_scenes:
+        raise RuntimeError(
+            "veo_prompts.json contains no scenes. "
+            "Re-run the planning pipeline."
+        )
+
+    for item in veo_scenes:
+        sid = item.get("scene_id", "<missing>")
+        prompt_value = item.get("prompt")
+        print(
+            f"  source {sid}: prompt_type={type(prompt_value).__name__}, "
+            f"prompt_len={len(prompt_value) if isinstance(prompt_value, str) else 'n/a'}"
+        )
+
     script_by_id = {
         scene["scene_id"]: scene
         for scene in script_data.get("scenes", [])
@@ -210,13 +227,31 @@ def main() -> int:
         scene_id = scene_prompt["scene_id"]
         script_scene = script_by_id.get(scene_id, {})
 
-        text = build_scene_prompt(
+        scene_text = build_scene_prompt(
             scene_prompt,
             script_scene,
         )
 
+        if not scene_text or not scene_text.strip():
+            raise RuntimeError(
+                f"Generated empty Flow prompt for {scene_id}. "
+                "Check veo_prompts.json and build_scene_prompt()."
+            )
+
         path = flow_dir / f"{scene_id}.txt"
-        path.write_text(text, encoding="utf-8")
+        written = path.write_text(scene_text, encoding="utf-8")
+
+        actual_size = path.stat().st_size if path.exists() else 0
+        if written <= 0 or actual_size <= 0:
+            raise RuntimeError(
+                f"Failed to write non-empty Flow prompt for {scene_id}: "
+                f"write_text returned {written}, file size is {actual_size}."
+            )
+
+        print(
+            f"  wrote {scene_id}: "
+            f"{written} chars, {actual_size} bytes -> {path.name}"
+        )
 
         index.append(
             {
