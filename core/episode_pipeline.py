@@ -80,7 +80,6 @@ class EpisodePipeline:
 
             stage = "context"
             context = context_builder.run(
-                self.llm,
                 request,
                 idea,
                 script,
