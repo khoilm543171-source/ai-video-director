@@ -42,6 +42,12 @@ class OpenAICompatibleLLM:
         )
         self.model = model or os.getenv("LLM_MODEL") or "deepseek-chat"
         self.timeout_s = timeout_s
+        self.last_usage: dict[str, int] = {}
+        self.total_usage = {
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "total_tokens": 0,
+        }
 
         if not self.api_key:
             raise LLMConfigurationError(
@@ -84,6 +90,14 @@ class OpenAICompatibleLLM:
             )
 
         body = response.json()
+        usage = body.get("usage") or {}
+        self.last_usage = {
+            "prompt_tokens": int(usage.get("prompt_tokens") or 0),
+            "completion_tokens": int(usage.get("completion_tokens") or 0),
+            "total_tokens": int(usage.get("total_tokens") or 0),
+        }
+        for key in self.total_usage:
+            self.total_usage[key] += self.last_usage[key]
 
         try:
             return body["choices"][0]["message"]["content"]
