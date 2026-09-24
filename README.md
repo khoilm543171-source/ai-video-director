@@ -396,8 +396,11 @@ Input:
 
     examples/episode_001_flow.json
 
-On Windows, after pulling the latest repository and installing dependencies:
+On Windows, while the fix is in PR #1, check out its branch, then launch:
 
+    git fetch origin
+    git switch --track origin/codex/episode001-flow-spec-20260925
+    python -m pip install -r requirements-orchestrator.txt
     powershell -ExecutionPolicy Bypass -File .\scripts\start_episode_001.ps1
 
 The launcher runs offline tests and compiles the eight jobs from the approved

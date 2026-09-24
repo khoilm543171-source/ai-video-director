@@ -21,12 +21,25 @@ If you have not cloned the repository yet, use a folder you own (for example
 Set-Location (Join-Path $HOME "Documents")
 git clone https://github.com/khoilm543171-source/ai-video-director.git
 Set-Location ai-video-director
+git fetch origin
+git switch --track origin/codex/episode001-flow-spec-20260925
 ```
 
 Otherwise, in PowerShell from your existing repository root:
 
 ```powershell
-git pull
+git fetch origin
+git switch --track origin/codex/episode001-flow-spec-20260925
+```
+
+If you have checked out the PR branch already, run
+`git switch codex/episode001-flow-spec-20260925` and `git pull` instead of
+running `git switch --track` again. After the PR is merged, the usual `main`
+branch will contain this workflow.
+
+Run the launcher from the repository root:
+
+```powershell
 python -m pip install -r requirements-orchestrator.txt
 powershell -ExecutionPolicy Bypass -File .\scripts\start_episode_001.ps1
 ```
