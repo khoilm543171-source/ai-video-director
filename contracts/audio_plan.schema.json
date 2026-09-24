@@ -1,0 +1,158 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Engine Cadet Episode Audio Plan",
+  "type": "object",
+  "required": [
+    "episode_id",
+    "duration_s",
+    "music",
+    "scenes"
+  ],
+  "properties": {
+    "episode_id": {
+      "type": "string"
+    },
+    "duration_s": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 90
+    },
+    "music": {
+      "type": "object",
+      "required": [
+        "prompt",
+        "duration_s",
+        "instrumental"
+      ],
+      "properties": {
+        "prompt": {
+          "type": "string"
+        },
+        "duration_s": {
+          "type": "number"
+        },
+        "instrumental": {
+          "type": "boolean"
+        },
+        "bpm": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "mood_arc": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "at_s",
+              "intensity"
+            ],
+            "properties": {
+              "at_s": {
+                "type": "number",
+                "minimum": 0
+              },
+              "intensity": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    "scenes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "scene_id",
+          "start_s",
+          "duration_s",
+          "voice",
+          "sfx_prompt"
+        ],
+        "properties": {
+          "scene_id": {
+            "type": "string"
+          },
+          "start_s": {
+            "type": "number",
+            "minimum": 0
+          },
+          "duration_s": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "video_path": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "voice": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "character",
+                "text",
+                "start_offset_s",
+                "emotion"
+              ],
+              "properties": {
+                "character": {
+                  "type": "string"
+                },
+                "text": {
+                  "type": "string"
+                },
+                "start_offset_s": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "emotion": {
+                  "type": "string"
+                },
+                "delivery": {
+                  "type": "string"
+                },
+                "paralinguistic_tags": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "reference_voice": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              }
+            }
+          },
+          "sfx_prompt": {
+            "type": "string"
+          },
+          "sfx_negative_prompt": {
+            "type": "string",
+            "default": "speech, dialogue, vocals, background music"
+          },
+          "ambient_level": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "sfx_level": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          }
+        }
+      }
+    }
+  }
+}
