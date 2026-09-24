@@ -31,7 +31,7 @@ class RoutedLLM:
         self.last_usage: dict[str, int] = {}
         self.retry_attempts = max(
             1,
-            int(os.getenv("LLM_RETRY_ATTEMPTS", "3")),
+            int(os.getenv("LLM_RETRY_ATTEMPTS", "2")),
         )
         self.retry_backoff = max(
             0.0,
@@ -118,107 +118,3 @@ class ProviderRouter:
                 for item in os.getenv("VILAO_FALLBACK_MODELS", "").split(",")
                 if item.strip()
             ]
-            models = [model]
-            for item in fallback_models:
-                if item not in models:
-                    models.append(item)
-
-            base_url = os.getenv(
-                "VILAO_BASE_URL",
-                "https://api.vilao.ai/v1",
-            ).rstrip("/")
-
-            return [
-                ProviderConfig(
-                    name="vilao",
-                    base_url=base_url,
-                    api_key=key,
-                    model=item,
-                )
-                for item in models
-            ]
-
-        if provider == "deepseek":
-            key = (
-                os.getenv("DEEPSEEK_API_KEY")
-                or os.getenv("LLM_API_KEY")
-                or ""
-            ).strip()
-            if not key:
-                raise LLMConfigurationError(
-                    "DEEPSEEK_API_KEY is missing in .env."
-                )
-            return [
-                ProviderConfig(
-                    name="deepseek",
-                    base_url=os.getenv(
-                        "DEEPSEEK_BASE_URL",
-                        "https://api.deepseek.com",
-                    ).rstrip("/"),
-                    api_key=key,
-                    model=os.getenv(
-                        "DEEPSEEK_MODEL",
-                        "deepseek-chat",
-                    ).strip(),
-                )
-            ]
-
-        if provider in {"generic", "openai_compatible"}:
-            key = os.getenv("LLM_API_KEY", "").strip()
-            model = os.getenv("LLM_MODEL", "").strip()
-            base_url = os.getenv("LLM_BASE_URL", "").strip()
-            if not key or not model or not base_url:
-                raise LLMConfigurationError(
-                    "Generic provider requires LLM_BASE_URL, LLM_MODEL, "
-                    "and LLM_API_KEY."
-                )
-            return [
-                ProviderConfig(
-                    name="generic",
-                    base_url=base_url.rstrip("/"),
-                    api_key=key,
-                    model=model,
-                )
-            ]
-
-        raise LLMConfigurationError(
-            f"Unknown LLM provider: {provider}. "
-            "Supported: vilao, deepseek, generic."
-        )
-
-    @staticmethod
-    def _client(config: ProviderConfig) -> OpenAICompatibleLLM:
-        return OpenAICompatibleLLM(
-            base_url=config.base_url,
-            api_key=config.api_key,
-            model=config.model,
-        )
-
-    def for_stage(self, stage: str) -> RoutedLLM:
-        if stage not in self.STAGES:
-            raise ValueError(f"Unknown LLM stage: {stage}")
-
-        env_name = f"{stage.upper()}_LLM_PROVIDER"
-        primary_name = os.getenv(
-            env_name,
-            self.default_provider,
-        ).lower().strip()
-
-        names = [primary_name]
-        if (
-            self.fallback_provider
-            and self.fallback_provider != primary_name
-        ):
-            names.append(self.fallback_provider)
-
-        configs: list[ProviderConfig] = []
-        for name in names:
-            configs.extend(self._configs(name))
-
-        clients = [self._client(config) for config in configs]
-        route_name = " -> ".join(
-            f"{config.name}:{config.model}"
-            for config in configs
-        )
-
-        return RoutedLLM(clients, route_name=route_name)
