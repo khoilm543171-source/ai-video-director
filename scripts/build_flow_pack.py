@@ -376,7 +376,11 @@ def main() -> int:
         batch_sections.append(
             "\n".join(
                 [
-                    f"========== CLIP {scene_number:02d} / {scene_id} ==========",
+                    (
+                        f"========== CLIP {scene_number:02d} / {scene_id} — "
+                        f"EXACTLY {float(scene_prompt['duration_s']):.1f} SECONDS =========="
+                    ),
+                    "Generate this block as ONE separate video clip. Stop at the exact duration.",
                     scene_text.strip(),
                 ]
             )
@@ -475,17 +479,46 @@ def main() -> int:
         encoding="utf-8",
     )
 
+    timeline_lines = []
+    cursor = 0.0
+    for job, scene_prompt in zip(index, veo_scenes):
+        duration = float(scene_prompt["duration_s"])
+        start = cursor
+        end = cursor + duration
+        timeline_lines.append(
+            f"- {job['scene_id']}: EXACTLY {duration:.1f} seconds "
+            f"(timeline {start:.1f}s–{end:.1f}s)"
+        )
+        cursor = end
+
     batch_prompt = "\n".join(
         [
-            "GOOGLE FLOW MULTI-SCENE BATCH BRIEF",
+            "GOOGLE FLOW AGENT — MULTI-CLIP PRODUCTION BRIEF",
             "",
-            f"Create exactly {len(batch_sections)} separate video clips in the numbered order below.",
-            "Do not merge multiple scene blocks into one clip.",
+            "CRITICAL OUTPUT INSTRUCTION:",
+            f"- Create exactly {len(batch_sections)} SEPARATE video clips.",
+            "- DO NOT create one continuous 60-second video.",
+            "- DO NOT merge, blend, crossfade, or extend across clip boundaries.",
+            "- Each numbered clip is an independent generation job.",
+            "- Respect the exact duration written for each clip.",
+            "- End each clip at its stated boundary even if the action could continue.",
+            "- Keep character identities, environment, screen direction, lighting, and machinery geography continuous across clips.",
+            "- Output clips in order and keep them separately identifiable as scene_01, scene_02, etc.",
+            "",
+            f"TOTAL EPISODE RUNTIME AFTER ASSEMBLY: {cursor:.1f} seconds.",
+            "",
+            "EXACT CLIP PLAN:",
+            *timeline_lines,
+            "",
+            "GLOBAL RULES:",
+            "",
             "Keep @TinyCadet, @ChiefEngineer and @EngineRoom visually consistent across every clip.",
             "Preserve left/right geography and continuity from one clip to the next.",
             "Use the exact dialogue written inside each clip block; do not paraphrase or add dialogue.",
             "No subtitles or baked-in text. No background music.",
             "Each block defines its own duration, camera, action, dialogue and avoid list.",
+            "",
+            "SCENE JOBS — GENERATE EACH BLOCK AS ITS OWN VIDEO CLIP:",
             "",
             *batch_sections,
             "",
