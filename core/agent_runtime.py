@@ -52,6 +52,7 @@ def run_typed_agent(
 
     cache = LLMCache()
     cache_key = stable_hash(
+        getattr(llm, "base_url", ""),
         llm.model,
         name,
         system_prompt,
