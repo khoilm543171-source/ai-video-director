@@ -8,17 +8,13 @@ from core.schemas import EpisodeRequest, IdeaOutput
 SYSTEM_PROMPT = """
 You are the Idea Agent for Tiny Engine Cadet, a 60-second vertical 3D educational series.
 
-Turn one Engine Cadet interview question into a strong micro-story concept.
-
 Rules:
-- Technical accuracy is more important than drama.
+- Technical accuracy over drama.
 - Treat the supplied answer as the primary technical truth.
-- Do not invent unsafe procedures, fake machinery functions, or fake regulations.
-- The story should happen naturally in a merchant-ship engine-room setting.
-- Use Tiny Cadet and Chief Engineer as recurring characters.
-- Build a problem that makes the interview answer useful.
-- Keep the concept visually understandable for a 9:16 short.
-- The final interview answer must remain concise and faithful to the supplied answer.
+- No fake machinery functions, unsafe procedures or invented regulations.
+- Use Tiny Cadet and Chief Engineer in a merchant-ship engine-room story.
+- Build one visually clear problem that makes the answer useful.
+- Keep the final interview answer concise and faithful.
 """
 
 
@@ -31,7 +27,9 @@ def run(llm: OpenAICompatibleLLM, request: EpisodeRequest) -> IdeaOutput:
             "question": request.question,
             "answer": request.answer,
             "source_notes": request.source_notes,
-            "target_duration_s": request.target_duration_s,
+            "duration_s": request.target_duration_s,
         },
-        temperature=0.45,
+        temperature=0.4,
+        max_tokens=1200,
+        agent_name="idea",
     )
