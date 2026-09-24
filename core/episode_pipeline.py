@@ -5,6 +5,7 @@ from pathlib import Path
 
 from agents import (
     audio_director,
+    content_reviewer,
     context_builder,
     idea_agent,
     script_agent,
@@ -72,6 +73,28 @@ class EpisodePipeline:
             )
             self._validate_script(script)
             self.state.save_stage(manifest, "script", script.model_dump())
+
+            stage = "content_review"
+            review = content_reviewer.run(
+                self._llm("content_review"),
+                request,
+                idea,
+                story,
+                script,
+            )
+            self.state.save_stage(
+                manifest,
+                "content_review",
+                review.model_dump(),
+                filename="review_report.json",
+            )
+
+            if review.decision != "PASS":
+                manifest.status = "needs_content_revision"
+                manifest.current_stage = "content_review"
+                manifest.error = None
+                self.state.save_manifest(manifest)
+                return manifest
 
             stage = "storyboard"
             storyboard = storyboard_agent.run(
