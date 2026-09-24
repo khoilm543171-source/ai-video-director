@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "environments": {
+    "engine_room_master": {
+      "display_name": "Engine Room",
+      "flow_asset_name": "EngineRoom",
+      "purpose": "Primary recurring environment for the Tiny Engine Cadet series",
+      "visual_identity": {
+        "space": "modern merchant ship engine room, multi-level industrial machinery space",
+        "architecture": "steel decks, grated walkways, ladders, pipes, valves, cable trays, handrails and large marine machinery arranged plausibly",
+        "palette": "navy, steel gray, off-white machinery housings, restrained safety yellow accents",
+        "lighting": "clean practical industrial lighting with soft cinematic contrast; readable faces and machinery",
+        "atmosphere": "slight warm machinery haze, clean but actively operated ship, no dramatic smoke unless technically justified",
+        "scale": "characters appear miniature and cute, but machinery retains believable marine-engine proportions",
+        "forbidden_changes": [
+          "no futuristic spaceship interiors",
+          "no fantasy machinery",
+          "no random factory conveyor belts",
+          "no luxury cruise-ship passenger spaces",
+          "no logos or readable company branding",
+          "no unsafe missing guardrails where a real platform requires them",
+          "no excessive steam, sparks, fire or smoke unless the story explicitly requires a fault"
+        ]
+      },
+      "camera_language": [
+        "vertical 9:16 composition",
+        "medium and medium-wide shots for dialogue",
+        "close-up inserts for valves, gauges, separators and tools",
+        "gentle tracking or dolly movement",
+        "avoid frantic handheld camera",
+        "maintain screen direction and spatial continuity between adjacent scenes"
+      ]
+    }
+  }
+}
