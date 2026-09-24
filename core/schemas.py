@@ -188,3 +188,37 @@ class ContentReviewOutput(BaseModel):
     issues: list[ReviewIssue] = Field(default_factory=list)
     revision_priority: list[str] = Field(default_factory=list)
     executive_summary: str
+
+
+class VisualReviewIssue(BaseModel):
+    severity: Literal["low", "medium", "high", "critical"]
+    category: Literal[
+        "character_consistency",
+        "story_match",
+        "maritime_accuracy",
+        "camera_quality",
+        "artifact_quality",
+        "continuity",
+        "ppe",
+    ]
+    time_hint_s: float | None = None
+    finding: str
+    evidence: str
+    repair_instruction: str
+
+
+class VisualReviewOutput(BaseModel):
+    scene_id: str
+    character_consistency: int = Field(ge=0, le=100)
+    story_match: int = Field(ge=0, le=100)
+    maritime_accuracy: int = Field(ge=0, le=100)
+    camera_quality: int = Field(ge=0, le=100)
+    artifact_quality: int = Field(ge=0, le=100)
+    continuity: int = Field(ge=0, le=100)
+    overall_score: int = Field(ge=0, le=100)
+    confidence: float = Field(ge=0, le=1)
+    decision: Literal["PASS", "RETRY_SCENE", "MANUAL_CHECK"]
+    issues: list[VisualReviewIssue] = Field(default_factory=list)
+    failed_checks: list[str] = Field(default_factory=list)
+    retry_prompt_delta: str = ""
+    summary: str
