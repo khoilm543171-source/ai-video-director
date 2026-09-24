@@ -27,7 +27,17 @@ Use recurring references when needed:
 ## Rules
 - Describe one primary visible action.
 - Never redesign recurring characters.
-- No spoken dialogue, music instructions, subtitles, or baked-in text in the video prompt.
+- Never invent dialogue. Attach the exact approved script dialogue downstream for native synchronized speech when Flow/Veo audio is used.
+- No background-music instructions, subtitles, or baked-in text.
 - Do not rely on tiny readable gauges or UI text.
 - Keep machinery physically plausible for a merchant ship engine room.
 - Scene prompt must not contradict the supplied reference image.
+
+## Native dialogue handoff
+When building a manual Flow scene prompt:
+- append exact approved dialogue after the visual block;
+- identify the speaker;
+- preserve approved emotion and delivery;
+- request natural synchronized lip-sync;
+- do not paraphrase or add filler;
+- keep ambience subtle and exclude background music.
