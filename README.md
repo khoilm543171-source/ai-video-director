@@ -274,3 +274,63 @@ The budget is intentionally fail-fast: if one agent grows beyond the configured 
 Detailed policy:
 
     config/token_budget.json
+
+## Veo render milestone
+
+The pipeline can render the generated scene prompts with the official Google GenAI SDK.
+
+Planning:
+
+    python scripts/run_episode.py --input examples/episode_request.json
+
+Wait for:
+
+    "status": "ready_for_render"
+
+Copy the returned episode_id.
+
+Configure .env:
+
+    GEMINI_API_KEY=YOUR_GOOGLE_API_KEY
+    VEO_MODEL=veo-3.1-generate-preview
+    VEO_ASPECT_RATIO=9:16
+    VEO_RESOLUTION=
+    VEO_FORCE_DURATION_SECONDS=
+    VEO_ENHANCE_PROMPT=true
+    VEO_POLL_SECONDS=10
+    VEO_TIMEOUT_SECONDS=900
+
+The model name above matches the current official google-genai README example.
+If your Google account exposes a different Veo model ID, use the model ID
+shown for your account instead.
+
+Check local Veo configuration:
+
+    python scripts/veo_doctor.py
+
+Inspect scene_01 without spending a Veo generation:
+
+    python scripts/render_episode.py --episode-id YOUR_EPISODE_ID --scene scene_01 --dry-run
+
+Generate exactly one scene first:
+
+    python scripts/render_episode.py --episode-id YOUR_EPISODE_ID --scene scene_01
+
+The MP4 is written to:
+
+    outputs/episodes/YOUR_EPISODE_ID/scenes/scene_01.mp4
+
+If the first scene looks acceptable, render the remaining scenes:
+
+    python scripts/render_episode.py --episode-id YOUR_EPISODE_ID --all
+
+The Render Manager writes render_manifest.json after every completed scene.
+Existing scene MP4 files are skipped unless --overwrite is supplied, so a failed
+later scene does not force earlier Veo generations to run again.
+
+Important:
+- Gemini app/Pro access does not itself provide an API credential.
+- The renderer requires a Gemini Developer API / Google API key with access to
+  the configured Veo model.
+- The video layer is generated separately from dialogue, Foley and background
+  music. Source audio can be discarded during the later FFmpeg mix stage.
