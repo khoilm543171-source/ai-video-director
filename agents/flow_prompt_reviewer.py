@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from core.agent_runtime import run_typed_agent
 from core.llm_client import OpenAICompatibleLLM
+from core.flow_prompt_checks import run_flow_prompt_checks
 from core.schemas import (
     ContextOutput,
     EpisodeRequest,
@@ -38,7 +39,13 @@ def run(
     context: ContextOutput,
     veo_prompts: VeoPromptsOutput,
 ) -> FlowPromptReviewOutput:
-    return run_typed_agent(
+    deterministic_checks = run_flow_prompt_checks(
+        script=script.model_dump(),
+        storyboard=storyboard.model_dump(),
+        veo_prompts=veo_prompts.model_dump(),
+    )
+
+    review = run_typed_agent(
         llm,
         FlowPromptReviewOutput,
         system_prompt=SYSTEM_PROMPT,
@@ -53,6 +60,7 @@ def run(
                 "negative_prompt": context.negative_prompt,
             },
             "veo_prompts": veo_prompts.model_dump(),
+            "deterministic_checks": deterministic_checks,
         },
         temperature=0.1,
         max_tokens=4200,
