@@ -3,3 +3,5 @@ uvicorn[standard]>=0.30
 pydantic>=2.8
 requests>=2.32
 PyYAML>=6.0
+python-dotenv>=1.0
+pytest>=8.0
