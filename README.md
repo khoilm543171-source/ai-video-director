@@ -37,15 +37,33 @@ The current milestone intentionally stops before paid video generation so story,
 
     Copy-Item .env.example .env
 
-5. Edit .env and set your OpenAI-compatible LLM credentials.
+5. Configure Vilao as the default OpenAI-compatible provider.
 
-DeepSeek example:
+    LLM_PROVIDER=vilao
+    LLM_FALLBACK_PROVIDER=
+    VILAO_BASE_URL=https://api.vilao.ai/v1
+    VILAO_API_KEY=YOUR_VILAO_KEY
+    VILAO_MODEL=EXACT_MODEL_ID_FROM_VILAO
 
-    LLM_BASE_URL=https://api.deepseek.com
-    LLM_MODEL=deepseek-chat
-    LLM_API_KEY=YOUR_KEY
+Do not guess VILAO_MODEL. Copy the exact model ID shown by the Vilao model/provider page or their API example for the route you purchased. A documentation example using gpt-4o only proves the request format; it does not mean your DeepSeek route is named gpt-4o.
 
-6. Run the first episode.
+6. Check local configuration without exposing your key.
+
+    python scripts/doctor.py
+
+7. Run a very small provider smoke test.
+
+    python scripts/test_llm.py
+
+The smoke test requests a tiny JSON response with max_tokens=64 before you spend tokens on a whole episode.
+
+8. Run project tests only.
+
+    python -m pytest -q tests
+
+pytest.ini prevents pytest from recursively collecting the large upstream test suites under vendor/.
+
+9. Run the first episode.
 
     python scripts/run_episode.py --input examples/episode_request.json
 
@@ -68,6 +86,34 @@ Expected files:
 A successful planning run ends with:
 
     "status": "ready_for_render"
+
+## LLM provider routing
+
+Vilao is the default route because it exposes an OpenAI-compatible chat-completions endpoint. The project only needs a base URL, API key and exact model ID.
+
+Default:
+
+    LLM_PROVIDER=vilao
+
+Optional direct DeepSeek fallback:
+
+    LLM_FALLBACK_PROVIDER=deepseek
+    DEEPSEEK_BASE_URL=https://api.deepseek.com
+    DEEPSEEK_MODEL=deepseek-chat
+    DEEPSEEK_API_KEY=YOUR_DIRECT_DEEPSEEK_KEY
+
+If you do not have a direct DeepSeek API key, leave LLM_FALLBACK_PROVIDER empty.
+
+Individual stages can later use different providers:
+
+    IDEA_LLM_PROVIDER=vilao
+    STORY_LLM_PROVIDER=vilao
+    SCRIPT_LLM_PROVIDER=vilao
+    STORYBOARD_LLM_PROVIDER=vilao
+    VEO_PROMPT_BUILDER_LLM_PROVIDER=vilao
+    AUDIO_DIRECTOR_LLM_PROVIDER=vilao
+
+This makes it possible to route cheap planning tasks to one provider/model and expensive technical/review tasks to another without rewriting the agents.
 
 ## API mode
 
