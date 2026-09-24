@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from agents.context_builder import run as build_context
 from core.episode_pipeline import EpisodePipeline
 from core.llm_client import extract_json_object
-from core.schemas import EpisodeRequest, ScriptOutput
+from core.schemas import EpisodeRequest, IdeaOutput, ScriptOutput
+from core.token_economy import compact_json_schema, rough_token_estimate, stable_hash
 
 
 def test_extract_plain_json():
@@ -62,3 +64,94 @@ def test_validate_script():
     )
 
     EpisodePipeline._validate_script(script)
+
+
+def test_compact_schema_removes_verbose_metadata():
+    schema = {
+        "title": "Example",
+        "type": "object",
+        "properties": {
+            "x": {
+                "title": "X",
+                "description": "Long explanation",
+                "type": "string",
+            }
+        },
+    }
+    compact = compact_json_schema(schema)
+    assert "title" not in compact
+    assert "description" not in compact["properties"]["x"]
+    assert compact["properties"]["x"]["type"] == "string"
+
+
+def test_stable_hash_is_deterministic():
+    assert stable_hash("a", "b") == stable_hash("a", "b")
+    assert stable_hash("a", "b") != stable_hash("a", "c")
+
+
+def test_token_estimate_increases_with_prompt_size():
+    assert rough_token_estimate("a" * 400) > rough_token_estimate("a" * 40)
+
+
+def test_context_builder_uses_no_llm():
+    request = EpisodeRequest(
+        question="What is a purifier?",
+        answer="A purifier removes water and solids from fuel.",
+    )
+    idea = IdeaOutput(
+        title="Purifier",
+        learning_objective="Explain purifier purpose.",
+        hook="Dirty fuel arrives.",
+        core_problem="Fuel contains contaminants.",
+        technical_truths=[
+            "A purifier removes water and solid impurities from fuel."
+        ],
+        story_premise="Cadet investigates dirty fuel.",
+        payoff="Cleaner fuel is supplied downstream.",
+        final_interview_answer="It removes water and solids from fuel.",
+    )
+    script = ScriptOutput.model_validate(
+        {
+            "title": "Purifier",
+            "duration_s": 8,
+            "final_interview_question": request.question,
+            "final_interview_answer": idea.final_interview_answer,
+            "scenes": [
+                {
+                    "scene_id": "scene_01",
+                    "start_s": 0,
+                    "end_s": 8,
+                    "location": "engine room",
+                    "purpose": "explain",
+                    "visual_action": "Cadet observes the purifier.",
+                    "dialogue": [],
+                }
+            ],
+        }
+    )
+    series = {
+        "aspect_ratio": "9:16",
+        "visual_style": "tiny 3D",
+        "continuity_rules": ["same characters"],
+    }
+    characters = {
+        "characters": {
+            "tiny_cadet": {
+                "display_name": "Tiny Cadet",
+                "role": "Engine Cadet",
+                "visual_identity": {"helmet": "white"},
+            }
+        }
+    }
+
+    context = build_context(
+        request,
+        idea,
+        script,
+        series,
+        characters,
+    )
+
+    assert "tiny_cadet" in context.characters
+    assert request.answer in context.episode_facts
+    assert context.global_visual_prompt
