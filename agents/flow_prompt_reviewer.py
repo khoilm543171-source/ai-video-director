@@ -300,12 +300,11 @@ def run(
         "target_duration_s": request.target_duration_s,
     }
 
-    midpoint = (len(compact_scenes) + 1) // 2
+    chunk_size = 2
     chunks = [
-        compact_scenes[:midpoint],
-        compact_scenes[midpoint:],
+        compact_scenes[index : index + chunk_size]
+        for index in range(0, len(compact_scenes), chunk_size)
     ]
-    chunks = [chunk for chunk in chunks if chunk]
 
     reviews: list[FlowPromptReviewOutput] = []
     for index, chunk in enumerate(chunks, start=1):
