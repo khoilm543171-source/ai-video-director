@@ -170,11 +170,20 @@ class OpenAICompatibleLLM:
             self.total_usage[key] += self.last_usage[key]
 
         try:
-            return body["choices"][0]["message"]["content"]
+            choice = body["choices"][0]
+            content = choice["message"]["content"]
+            finish_reason = choice.get("finish_reason")
         except (KeyError, IndexError, TypeError) as exc:
             raise LLMResponseError(
                 f"Unexpected LLM response shape: {body}"
             ) from exc
+
+        if finish_reason == "length":
+            raise LLMTransientError(
+                f"LLM output truncated at max_tokens={max_tokens}."
+            )
+
+        return content
 
     def chat_json(
         self,
