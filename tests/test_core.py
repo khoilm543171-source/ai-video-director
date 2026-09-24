@@ -218,3 +218,25 @@ def test_routed_llm_retries_transient_error(monkeypatch):
     assert result == {"ok": True}
     assert client.calls == 3
     assert routed.last_usage["total_tokens"] == 2
+
+
+def test_vilao_fallback_models_share_same_key(monkeypatch):
+    from core.provider_router import ProviderRouter
+
+    monkeypatch.setenv("LLM_PROVIDER", "vilao")
+    monkeypatch.setenv("LLM_FALLBACK_PROVIDER", "")
+    monkeypatch.setenv("VILAO_API_KEY", "test-key")
+    monkeypatch.setenv("VILAO_MODEL", "cheap-primary")
+    monkeypatch.setenv(
+        "VILAO_FALLBACK_MODELS",
+        "stable-second,stable-third",
+    )
+
+    routed = ProviderRouter().for_stage("idea")
+
+    assert [client.model for client in routed.clients] == [
+        "cheap-primary",
+        "stable-second",
+        "stable-third",
+    ]
+    assert all(client.api_key == "test-key" for client in routed.clients)
