@@ -70,7 +70,7 @@ class ProviderRouter:
     def __init__(self):
         self.default_provider = os.getenv("LLM_PROVIDER", "vilao").lower()
         self.fallback_provider = (
-            os.getenv("LLM_FALLBACK_PROVIDER", "deepseek").lower().strip()
+            os.getenv("LLM_FALLBACK_PROVIDER", "").lower().strip()
         )
 
     def _config(self, provider: str) -> ProviderConfig:
