@@ -10,6 +10,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+from core.flow_prompt_checks import run_flow_prompt_checks
 from core.state_manager import EpisodeStateManager
 
 
@@ -209,7 +210,12 @@ def main() -> int:
     parser.add_argument(
         "--skip-qa-gate",
         action="store_true",
-        help="Debug only: build the pack without requiring flow_prompt_review PASS.",
+        help="Debug only: bypass deterministic Flow preflight blockers.",
+    )
+    parser.add_argument(
+        "--strict-llm-review",
+        action="store_true",
+        help="Optional: also require the advisory LLM reviewer to return PASS.",
     )
     args = parser.parse_args()
 
@@ -249,12 +255,21 @@ def main() -> int:
     episode_dir = Path(manifest.output_dir)
 
     script_path = episode_dir / "script.json"
+    storyboard_path = episode_dir / "storyboard.json"
     veo_path = episode_dir / "veo_prompts.json"
 
-    if not script_path.exists() or not veo_path.exists():
+    if (
+        not script_path.exists()
+        or not storyboard_path.exists()
+        or not veo_path.exists()
+    ):
         print(f"Episode {episode_id} is not ready for Flow packaging.")
         print(f"Current status: {manifest.status}")
         print(f"script.json      : {'OK' if script_path.exists() else 'MISSING'}")
+        print(
+            f"storyboard.json  : "
+            f"{'OK' if storyboard_path.exists() else 'MISSING'}"
+        )
         print(f"veo_prompts.json : {'OK' if veo_path.exists() else 'MISSING'}")
         print(
             "\nFinish the planning pipeline first, then run "
@@ -263,27 +278,52 @@ def main() -> int:
         return 1
 
     script_data = load_json(script_path)
+    storyboard_data = load_json(storyboard_path)
     veo_data = load_json(veo_path)
 
-    # Flow prompt QA gate
-    review_path = episode_dir / "flow_prompt_review.json"
-    if not args.skip_qa_gate:
-        if not review_path.exists():
-            print("Flow prompt QA has not been run yet.")
+    deterministic_issues = run_flow_prompt_checks(
+        script=script_data,
+        storyboard=storyboard_data,
+        veo_prompts=veo_data,
+    )
+    deterministic_blockers = [
+        item
+        for item in deterministic_issues
+        if item.get("severity") in {"high", "critical"}
+    ]
+
+    if deterministic_blockers and not args.skip_qa_gate:
+        print("Deterministic Flow preflight BLOCKED packaging.")
+        for issue in deterministic_blockers:
             print(
-                "Run: python scripts/review_flow_prompts.py "
-                f"--episode-id {episode_id}"
+                f"- {str(issue.get('severity')).upper()} "
+                f"{issue.get('category')}: {issue.get('finding')}"
             )
-            return 2
+        print(
+            "\nFix deterministic blockers or use --skip-qa-gate "
+            "for debugging only."
+        )
+        return 2
+
+    review_path = episode_dir / "flow_prompt_review.json"
+    if review_path.exists():
         review_data = load_json(review_path)
         decision = review_data.get("decision")
-        if decision != "PASS":
+        score = review_data.get("overall_score")
+        print(
+            f"Advisory LLM review: {decision} "
+            f"({score}/100 if score is not None else 'n/a'})"
+        )
+        if args.strict_llm_review and decision != "PASS":
             print(
-                f"Flow prompt QA decision is {decision!r}; "
-                "batch generation is blocked."
+                "Strict LLM review mode is enabled, so packaging is blocked."
             )
-            print(f"Review report: {review_path}")
             return 2
+    elif args.strict_llm_review:
+        print(
+            "Strict LLM review mode requires flow_prompt_review.json."
+        )
+        return 2
 
     veo_scenes = veo_data.get("scenes", [])
     print(f"Veo prompt source: {veo_path}")
