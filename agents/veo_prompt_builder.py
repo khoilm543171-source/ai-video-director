@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from core.agent_runtime import run_typed_agent
 from core.llm_client import OpenAICompatibleLLM
+from core.skill_loader import compose_skills
 from core.schemas import ContextOutput, ScriptOutput, StoryboardOutput, VeoPromptsOutput
 
 
@@ -17,7 +18,10 @@ Rules:
 - Prefer one primary visible action per scene.
 - Keep prompts concrete and visual.
 - Combine global negatives with scene-specific failure risks.
-"""
+""" + "\n\n" + compose_skills(
+    "flow-video-prompt",
+    "camera-direction",
+)
 
 
 def run(
