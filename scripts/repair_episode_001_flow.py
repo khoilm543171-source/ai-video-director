@@ -21,11 +21,11 @@ MAX_WORDS_PER_SECOND = 2.55
 MIN_SCENE_SECONDS = 4.0
 
 PREFERRED_DURATIONS = {
-    "scene_1_hook": 5.0,
+    "scene_1_hook": 5.5,
     "scene_2_problem": 11.0,
     "scene_3_observation": 8.0,
     "scene_4_explanation": 11.0,
-    "scene_5_realization": 8.0,
+    "scene_5_realization": 7.5,
     "scene_6_interview_question": 4.0,
     "scene_7_concise_answer": 9.0,
     "scene_8_resolution": 4.0,
@@ -58,7 +58,11 @@ def word_count(scene: dict) -> int:
 
 def min_duration(scene: dict) -> float:
     words = word_count(scene)
-    speech = math.ceil(words / MAX_WORDS_PER_SECOND) if words else 0
+    if not words:
+        return float(MIN_SCENE_SECONDS)
+
+    raw = words / MAX_WORDS_PER_SECOND
+    speech = math.ceil(raw * 2.0) / 2.0
     return float(max(MIN_SCENE_SECONDS, speech))
 
 
@@ -74,15 +78,67 @@ def preferred_durations(script_scenes: list[dict]) -> list[float] | None:
             f"got {sum(values):.1f}s."
         )
 
-    for scene, duration in zip(script_scenes, values):
-        words = word_count(scene)
-        rate = words / duration if duration else 999
-        if words and rate > MAX_WORDS_PER_SECOND + 0.01:
-            raise RuntimeError(
-                f"Preferred timing for {scene['scene_id']} is too tight: "
-                f"{words} words / {duration:.1f}s = {rate:.2f} w/s."
-            )
-    return values
+    minimums = [min_duration(scene) for scene in script_scenes]
+
+    # Raise any preferred slot that is below its dialogue-safe minimum,
+    # then borrow the same amount from scenes that still have slack.
+    adjusted = list(values)
+    deficit = 0.0
+    for index, minimum in enumerate(minimums):
+        if adjusted[index] < minimum:
+            deficit += minimum - adjusted[index]
+            adjusted[index] = minimum
+
+    if deficit > 0:
+        donor_order = sorted(
+            range(len(adjusted)),
+            key=lambda i: adjusted[i] - minimums[i],
+            reverse=True,
+        )
+        for index in donor_order:
+            slack = adjusted[index] - minimums[index]
+            if slack <= 0:
+                continue
+            take = min(slack, deficit)
+            # keep half-second precision
+            take = math.floor(take * 2.0) / 2.0
+            if take <= 0:
+                continue
+            adjusted[index] -= take
+            deficit -= take
+            if deficit <= 0.001:
+                break
+
+    if deficit > 0.001:
+        raise RuntimeError(
+            "Preferred 60s schedule cannot satisfy dialogue-safe minimums. "
+            f"Unresolved deficit: {deficit:.1f}s."
+        )
+
+    drift = TARGET_SECONDS - sum(adjusted)
+    if abs(drift) > 0.001:
+        donor_order = sorted(
+            range(len(adjusted)),
+            key=lambda i: adjusted[i] - minimums[i],
+            reverse=True,
+        )
+        if drift > 0:
+            adjusted[donor_order[0]] += drift
+        else:
+            remaining = -drift
+            for index in donor_order:
+                slack = adjusted[index] - minimums[index]
+                take = min(slack, remaining)
+                adjusted[index] -= take
+                remaining -= take
+                if remaining <= 0.001:
+                    break
+            if remaining > 0.001:
+                raise RuntimeError(
+                    "Could not normalize preferred schedule to exactly 60s."
+                )
+
+    return [round(value * 2.0) / 2.0 for value in adjusted]
 
 
 def allocate_durations(script_scenes: list[dict]) -> list[float]:
