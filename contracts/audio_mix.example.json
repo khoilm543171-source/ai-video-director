@@ -1,0 +1,32 @@
+{
+  "duration_s": 60,
+  "voice": [
+    {
+      "path": "outputs/audio/voice/scene01_cadet.wav",
+      "start_s": 0.6,
+      "gain_db": 0
+    },
+    {
+      "path": "outputs/audio/voice/scene02_chief.wav",
+      "start_s": 7.2,
+      "gain_db": 0
+    }
+  ],
+  "sfx": [
+    {
+      "path": "outputs/audio/sfx/scene01.flac",
+      "start_s": 0,
+      "gain_db": -8
+    },
+    {
+      "path": "outputs/audio/sfx/scene02.flac",
+      "start_s": 7.5,
+      "gain_db": -8
+    }
+  ],
+  "music": {
+    "path": "outputs/audio/music/episode001.wav",
+    "gain_db": -22
+  },
+  "output": "outputs/audio/final/episode001_audio.m4a"
+}
