@@ -16,7 +16,7 @@ if str(PROJECT_ROOT) not in sys.path:
 from core.state_manager import EpisodeStateManager
 
 
-SOFT_SOFT_TARGET_SECONDS = 60.0
+SOFT_TARGET_SECONDS = 60.0
 MAX_WORDS_PER_SECOND = 2.55
 MIN_SCENE_SECONDS = 4.0
 
