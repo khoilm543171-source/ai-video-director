@@ -26,7 +26,7 @@ PREFERRED_DURATIONS = {
     "scene_4_explanation": 13.0,
     "scene_5_realization": 8.0,
     "scene_6_interview_question": 5.0,
-    "scene_7_concise_answer": 10.0,
+    "scene_7_concise_answer": 12.0,
     "scene_8_resolution": 4.0,
 }
 
@@ -63,6 +63,11 @@ SCENE_VISUALS = {
             "the lower frame screen-left to screen-right."
         ),
         "technical": None,
+        "dialogue_pacing": (
+            "Tiny Cadet speaks first from about 0.5s to 3.0s. Pause briefly. "
+            "Chief Engineer replies from about 3.5s to 11.5s. "
+            "Keep the nod after the Chief Engineer finishes speaking."
+        ),
     },
     "scene_3_observation": {
         "action": (
@@ -74,30 +79,38 @@ SCENE_VISUALS = {
             "Fixed eye-level medium shot centered on the purifier. No truck, pan, or dolly."
         ),
         "composition": (
-            "Purifier centered, inlet screen-left, outlet screen-right, Chief Engineer "
-            "screen-left and Tiny Cadet screen-right."
+            "Purifier centered and fully inside the vertical 9:16 safe area, inlet "
+            "screen-left, outlet screen-right. Chief Engineer remains lower-left and "
+            "Tiny Cadet lower-right as supporting figures."
         ),
         "technical": None,
+        "dialogue_pacing": (
+            "Chief Engineer speaks first, then pause briefly, then Tiny Cadet speaks. "
+            "Keep both approved lines sequential with no overlap."
+        ),
     },
     "scene_4_explanation": {
         "action": (
-            "The purifier cutaway is the primary visual. Show only the approved concept: "
-            "dirty fuel enters, water and solid impurities move outward by centrifugal "
-            "separation, and cleaner fuel leaves. Chief Engineer and Tiny Cadet remain "
-            "small supporting figures at the frame edges."
+            "The purifier cutaway is the primary visual. Use only two readable beats: "
+            "dirty fuel entering, then cleaner fuel leaving. During both beats, suggest "
+            "centrifugal separation only as one continuous background effect showing "
+            "water and solid impurities being removed. Chief Engineer and Tiny Cadet "
+            "remain small supporting figures at the frame edges."
         ),
         "camera": (
-            "Fixed eye-level medium shot centered on the purifier cutaway. Stable focus, "
-            "no rack focus and no camera movement."
+            "Fixed eye-level medium-wide shot centered on the purifier cutaway. "
+            "Stable focus, no rack focus and no camera movement."
         ),
         "composition": (
             "Purifier and cutaway dominate the center of the vertical frame. Chief Engineer "
             "is small at the left edge and Tiny Cadet small at the right edge."
         ),
         "technical": (
-            "Water and solid impurities are removed from fuel oil by centrifugal separation. "
-            "Do not depict or claim internal flow paths, RPM, temperatures, maintenance, "
-            "alarms, intervals, regulations, or troubleshooting."
+            "Show only the approved concept that centrifugal separation removes water "
+            "and solid impurities from fuel oil. The cutaway may suggest spinning and "
+            "separation, but must not claim exact internal flow paths or mechanical internals. "
+            "Do not add RPM, temperatures, maintenance, alarms, intervals, regulations, "
+            "or troubleshooting."
         ),
     },
     "scene_5_realization": {
@@ -140,17 +153,24 @@ SCENE_VISUALS = {
             "Chief Engineer listens and gives one small approving nod only after the answer."
         ),
         "camera": (
-            "Fixed eye-level medium close-up on Tiny Cadet. No dolly, pan, purifier glance, "
-            "or additional choreography during the answer."
+            "Fixed eye-level medium close-up on Tiny Cadet. No dolly, pan, tilt, reframe, "
+            "or additional choreography during the answer. Keep the purifier softly visible "
+            "as a static background element."
         ),
         "composition": (
-            "Tiny Cadet is the clear center subject. Chief Engineer remains at the left edge "
-            "and the purifier stays softly visible in the background."
+            "Maintain Chief Engineer screen-left and Tiny Cadet screen-right as in scene_6; "
+            "do not reverse screen direction. Tiny Cadet is the clear center subject and the "
+            "purifier stays softly visible as a static background element."
         ),
         "technical": (
             "Keep the exact approved answer from script.json. Do not expand beyond removing "
             "water and solid impurities by centrifugal separation so cleaner fuel is supplied "
             "to the engine."
+        ),
+        "dialogue_pacing": (
+            "Tiny Cadet delivers the full approved answer from about 0.5s to 10.5s "
+            "at a clear, measured but brisk pace. Chief Engineer gives one small approving "
+            "nod only after the final word, around 10.8s to 11.6s."
         ),
     },
     "scene_8_resolution": {
@@ -231,13 +251,15 @@ def clean_negative(existing: str) -> str:
         for item in str(existing or "").split(",")
         if item.strip()
     ]
-    kept = [item for item in values if item.lower() not in blocked]
 
-    seen = {item.lower() for item in kept}
-    for item in GLOBAL_NEGATIVES:
-        if item.lower() not in seen:
-            kept.append(item)
-            seen.add(item.lower())
+    kept: list[str] = []
+    seen: set[str] = set()
+    for item in [*values, *GLOBAL_NEGATIVES]:
+        lowered = item.lower()
+        if lowered in blocked or lowered in seen:
+            continue
+        kept.append(item)
+        seen.add(lowered)
 
     return ", ".join(kept)
 
@@ -275,12 +297,21 @@ def build_visual_prompt(
             ]
         )
 
+    if visual.get("dialogue_pacing"):
+        lines.extend(
+            [
+                "",
+                "DIALOGUE PACING:",
+                visual["dialogue_pacing"],
+            ]
+        )
+
     lines.extend(
         [
             "",
             "AUDIO HANDOFF:",
-            "Do not suppress speech or lip-sync. Exact approved dialogue is attached "
-            "downstream by the Flow pack. Generate no background music.",
+            "Approved dialogue is delivered downstream with native lip-sync. "
+            "Engine-room ambience only. No background music.",
             "",
             "Do not add subtitles, captions, labels, or readable machinery text.",
         ]
