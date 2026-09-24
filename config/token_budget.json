@@ -9,8 +9,9 @@
   },
   "input_budget": {
     "estimated_tokens_per_agent": 6000,
-    "behavior": "fail_fast_and_reduce_context",
-    "note": "This is a local rough estimate, not provider billing."
+    "behavior": "soft_warn_compact_chunk_cache_then_allow",
+    "note": "6000 is an optimization target, not a hard cap. Preserve correctness and completeness; compact/chunk/cache first, then allow larger prompts when needed.",
+    "hard_cap_enabled_by_default": false
   },
   "output_caps": {
     "idea": 1200,
