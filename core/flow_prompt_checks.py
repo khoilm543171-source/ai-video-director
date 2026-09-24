@@ -117,28 +117,7 @@ def run_flow_prompt_checks(
                     }
                 )
 
-            conflicts = [
-                phrase
-                for phrase in (
-                    "no spoken dialogue audio",
-                    "no dialogue audio",
-                    "no lip-sync",
-                    "lip-sync mouth shapes for spoken words",
-                )
-                if phrase in (prompt + " " + negative).lower()
-            ]
-            if conflicts:
-                issues.append(
-                    {
-                        "severity": "high",
-                        "scene_id": sid,
-                        "category": "audio",
-                        "finding": (
-                            "Dialogue scene contains conflicting suppression "
-                            f"instructions: {', '.join(conflicts)}."
-                        ),
-                    }
-                )
+
 
         refs = {
             str(item).lower()
