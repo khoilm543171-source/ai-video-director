@@ -13,6 +13,7 @@ from agents import (
     veo_prompt_builder,
 )
 from core.llm_client import OpenAICompatibleLLM
+from core.provider_router import ProviderRouter
 from core.schemas import EpisodeManifest, EpisodeRequest
 from core.state_manager import EpisodeStateManager
 
@@ -28,7 +29,8 @@ class EpisodePipeline:
             if project_root
             else Path(__file__).resolve().parents[1]
         )
-        self.llm = llm or OpenAICompatibleLLM()
+        self.fixed_llm = llm
+        self.router = None if llm else ProviderRouter()
         self.state = EpisodeStateManager(
             self.project_root / "outputs" / "episodes"
         )
@@ -43,26 +45,37 @@ class EpisodePipeline:
     def _load_json(path: Path) -> dict:
         return json.loads(path.read_text(encoding="utf-8"))
 
+    def _llm(self, stage: str):
+        if self.fixed_llm is not None:
+            return self.fixed_llm
+        assert self.router is not None
+        return self.router.for_stage(stage)
+
     def run(self, request: EpisodeRequest) -> EpisodeManifest:
         manifest = self.state.create(request)
         stage = "idea"
 
         try:
-            idea = idea_agent.run(self.llm, request)
+            idea = idea_agent.run(self._llm("idea"), request)
             self.state.save_stage(manifest, "idea", idea.model_dump())
 
             stage = "story"
-            story = story_agent.run(self.llm, request, idea)
+            story = story_agent.run(self._llm("story"), request, idea)
             self.state.save_stage(manifest, "story", story.model_dump())
 
             stage = "script"
-            script = script_agent.run(self.llm, request, idea, story)
+            script = script_agent.run(
+                self._llm("script"),
+                request,
+                idea,
+                story,
+            )
             self._validate_script(script)
             self.state.save_stage(manifest, "script", script.model_dump())
 
             stage = "storyboard"
             storyboard = storyboard_agent.run(
-                self.llm,
+                self._llm("storyboard"),
                 script,
                 self.series_bible,
                 self.character_bible,
@@ -94,7 +107,7 @@ class EpisodePipeline:
 
             stage = "veo_prompts"
             veo_prompts = veo_prompt_builder.run(
-                self.llm,
+                self._llm("veo_prompt_builder"),
                 script,
                 storyboard,
                 context,
@@ -112,7 +125,7 @@ class EpisodePipeline:
 
             stage = "audio_plan"
             audio_plan = audio_director.run(
-                self.llm,
+                self._llm("audio_director"),
                 manifest.episode_id,
                 script,
                 storyboard,
