@@ -155,3 +155,31 @@ def test_context_builder_uses_no_llm():
     assert "tiny_cadet" in context.characters
     assert request.answer in context.episode_facts
     assert context.global_visual_prompt
+
+
+def test_vilao_provider_config(monkeypatch):
+    from core.provider_router import ProviderRouter
+
+    monkeypatch.setenv("LLM_PROVIDER", "vilao")
+    monkeypatch.setenv("LLM_FALLBACK_PROVIDER", "")
+    monkeypatch.setenv("VILAO_API_KEY", "test-key")
+    monkeypatch.setenv("VILAO_MODEL", "test-model")
+    monkeypatch.setenv("VILAO_BASE_URL", "https://api.vilao.ai/v1")
+
+    routed = ProviderRouter().for_stage("idea")
+    assert "vilao:test-model" in routed.model
+    assert routed.clients[0].base_url == "https://api.vilao.ai/v1"
+
+
+def test_stage_provider_override(monkeypatch):
+    from core.provider_router import ProviderRouter
+
+    monkeypatch.setenv("LLM_PROVIDER", "vilao")
+    monkeypatch.setenv("SCRIPT_LLM_PROVIDER", "deepseek")
+    monkeypatch.setenv("LLM_FALLBACK_PROVIDER", "")
+    monkeypatch.setenv("VILAO_API_KEY", "vilao-key")
+    monkeypatch.setenv("VILAO_MODEL", "vilao-model")
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "deepseek-key")
+
+    routed = ProviderRouter().for_stage("script")
+    assert routed.model.startswith("deepseek:")
