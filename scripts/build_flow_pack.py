@@ -102,25 +102,96 @@ def build_scene_prompt(
     return "\n".join(lines).strip() + "\n"
 
 
+def list_episode_ids(root: Path) -> list[str]:
+    if not root.exists():
+        return []
+    items = [
+        path
+        for path in root.iterdir()
+        if path.is_dir() and (path / "manifest.json").exists()
+    ]
+    items.sort(
+        key=lambda path: (path / "manifest.json").stat().st_mtime,
+        reverse=True,
+    )
+    return [path.name for path in items]
+
+
+def latest_render_ready_episode(root: Path) -> str | None:
+    for episode_id in list_episode_ids(root):
+        episode_dir = root / episode_id
+        if (
+            (episode_dir / "script.json").exists()
+            and (episode_dir / "veo_prompts.json").exists()
+        ):
+            return episode_id
+    return None
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Build manual Google Flow prompt pack for one episode."
     )
-    parser.add_argument("--episode-id", required=True)
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument(
+        "--episode-id",
+        help="Real episode id, for example ep_20260925_001234_ab12cd.",
+    )
+    group.add_argument(
+        "--latest",
+        action="store_true",
+        help="Use the newest episode that already has script.json and veo_prompts.json.",
+    )
     args = parser.parse_args()
 
-    state = EpisodeStateManager(PROJECT_ROOT / "outputs" / "episodes")
-    manifest = state.load_manifest(args.episode_id)
+    episodes_root = PROJECT_ROOT / "outputs" / "episodes"
+    state = EpisodeStateManager(episodes_root)
+
+    if args.latest:
+        episode_id = latest_render_ready_episode(episodes_root)
+        if not episode_id:
+            print("No render-ready episode was found.")
+            print(
+                "Run: python scripts/run_episode.py "
+                "--input examples/episode_request.json"
+            )
+            return 1
+    else:
+        episode_id = args.episode_id
+
+    try:
+        manifest = state.load_manifest(episode_id)
+    except FileNotFoundError:
+        print(f"Episode not found: {episode_id}")
+        available = list_episode_ids(episodes_root)[:10]
+        if available:
+            print("\nRecent episode IDs:")
+            for item in available:
+                print(f"  {item}")
+            print("\nTip: use --latest to pick the newest render-ready episode.")
+        else:
+            print("\nNo episodes exist yet.")
+            print(
+                "Run: python scripts/run_episode.py "
+                "--input examples/episode_request.json"
+            )
+        return 1
+
     episode_dir = Path(manifest.output_dir)
 
     script_path = episode_dir / "script.json"
     veo_path = episode_dir / "veo_prompts.json"
 
     if not script_path.exists() or not veo_path.exists():
-        raise FileNotFoundError(
-            "script.json or veo_prompts.json is missing. "
-            "Run the episode planning pipeline first."
+        print(f"Episode {episode_id} is not ready for Flow packaging.")
+        print(f"Current status: {manifest.status}")
+        print(f"script.json      : {'OK' if script_path.exists() else 'MISSING'}")
+        print(f"veo_prompts.json : {'OK' if veo_path.exists() else 'MISSING'}")
+        print(
+            "\nFinish the planning pipeline first, then run "
+            "build_flow_pack.py again."
         )
+        return 1
 
     script_data = load_json(script_path)
     veo_data = load_json(veo_path)
@@ -202,7 +273,7 @@ def main() -> int:
     (flow_dir / "flow_jobs.json").write_text(
         json.dumps(
             {
-                "episode_id": args.episode_id,
+                "episode_id": episode_id,
                 "flow_assets": [
                     "TinyCadet",
                     "ChiefEngineer",
