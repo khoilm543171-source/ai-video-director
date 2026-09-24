@@ -11,6 +11,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from core.flow_prompt_checks import run_flow_prompt_checks
+from core.flow_prompt_compiler import compile_flow_spec
 from core.state_manager import EpisodeStateManager
 
 
@@ -207,17 +208,43 @@ def main() -> int:
         action="store_true",
         help="Use the newest episode that already has script.json and veo_prompts.json.",
     )
+    group.add_argument(
+        "--spec",
+        type=Path,
+        help="Approved structured Flow spec; build offline without LLM calls.",
+    )
     parser.add_argument(
         "--skip-qa-gate",
         action="store_true",
-        help="Debug only: bypass deterministic Flow preflight blockers.",
+        help="Deprecated; deterministic Flow preflight cannot be bypassed.",
     )
     parser.add_argument(
         "--strict-llm-review",
         action="store_true",
-        help="Optional: also require the advisory LLM reviewer to return PASS.",
+        help="Deprecated; LLM review is advisory only.",
     )
     args = parser.parse_args()
+
+    if args.skip_qa_gate or args.strict_llm_review:
+        parser.error("Deterministic preflight is mandatory; LLM review is advisory only.")
+
+    approved_spec = PROJECT_ROOT / "examples" / "episode_001_flow.json"
+    spec_path = args.spec
+    if args.episode_id == "episode_001_fuel_oil_purifier" and spec_path is None:
+        spec_path = approved_spec
+    if spec_path is not None:
+        if not spec_path.is_absolute():
+            spec_path = PROJECT_ROOT / spec_path
+        spec = load_json(spec_path)
+        try:
+            flow_dir = compile_flow_spec(spec, PROJECT_ROOT / "outputs" / "episodes")
+        except (ValueError, KeyError) as exc:
+            print(str(exc))
+            return 2
+        print(f"Deterministic preflight PASS: {spec['expected_clips']} separate Flow jobs, {sum(s['duration_s'] for s in spec['scenes']):g}s final runtime.")
+        print(f"Flow pack: {flow_dir}")
+        print("Open START_HERE.md, render scene_01, then review actual audio/video before moving on.")
+        return 0
 
     episodes_root = PROJECT_ROOT / "outputs" / "episodes"
     state = EpisodeStateManager(episodes_root)
@@ -292,7 +319,7 @@ def main() -> int:
         if item.get("severity") in {"high", "critical"}
     ]
 
-    if deterministic_blockers and not args.skip_qa_gate:
+    if deterministic_blockers:
         print("Deterministic Flow preflight BLOCKED packaging.")
         for issue in deterministic_blockers:
             print(
@@ -300,8 +327,7 @@ def main() -> int:
                 f"{issue.get('category')}: {issue.get('finding')}"
             )
         print(
-            "\nFix deterministic blockers or use --skip-qa-gate "
-            "for debugging only."
+            "\nFix deterministic blockers before packaging."
         )
         return 2
 
@@ -310,20 +336,8 @@ def main() -> int:
         review_data = load_json(review_path)
         decision = review_data.get("decision")
         score = review_data.get("overall_score")
-        print(
-            f"Advisory LLM review: {decision} "
-            f"({score}/100 if score is not None else 'n/a'})"
-        )
-        if args.strict_llm_review and decision != "PASS":
-            print(
-                "Strict LLM review mode is enabled, so packaging is blocked."
-            )
-            return 2
-    elif args.strict_llm_review:
-        print(
-            "Strict LLM review mode requires flow_prompt_review.json."
-        )
-        return 2
+        score_label = f"{score}/100" if score is not None else "n/a"
+        print(f"Advisory LLM review: {decision} ({score_label})")
 
     veo_scenes = veo_data.get("scenes", [])
     print(f"Veo prompt source: {veo_path}")
@@ -502,7 +516,7 @@ def main() -> int:
             "",
             "## Optional batch mode",
             "If your current Flow UI supports multi-scene/batch generation, use FLOW_BATCH_PROMPT.txt.",
-            "The batch file contains all scene prompts in order and must only be used after flow_prompt_review.json is PASS.",
+            "The batch file contains planning instructions; each block must be a separate scene job. Deterministic preflight must PASS.",
             "",
             "Each scene prompt already includes exact approved dialogue when dialogue exists.",
             "Do not manually paraphrase or add lines in Flow.",

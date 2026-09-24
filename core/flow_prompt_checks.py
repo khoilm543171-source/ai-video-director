@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import Any
 
 
@@ -37,6 +38,17 @@ def run_flow_prompt_checks(
         )
         return issues
 
+    ids = [scene.get("scene_id") for scene in script_scenes]
+    if len(set(ids)) != len(ids):
+        issues.append({"severity": "critical", "scene_id": None,
+                       "category": "production", "finding": "Script contains duplicate scene ids."})
+    if script_scenes and script.get("duration_s") is not None:
+        declared = float(script["duration_s"])
+        last_end = float(script_scenes[-1].get("end_s") or 0)
+        if abs(declared - last_end) > 0.01:
+            issues.append({"severity": "high", "scene_id": None,
+                           "category": "production", "finding": "Declared script duration differs from the last scene end."})
+
     for idx, (s, b, p) in enumerate(
         zip(script_scenes, board_scenes, prompt_scenes),
         start=1,
@@ -61,10 +73,13 @@ def run_flow_prompt_checks(
                 )
 
         duration = float(p.get("duration_s") or 0)
+        if idx > 1 and abs(float(s.get("start_s") or 0) - float(script_scenes[idx - 2].get("end_s") or 0)) > 0.01:
+            issues.append({"severity": "high", "scene_id": sid,
+                           "category": "production", "finding": "Timeline has a gap or overlap before this scene."})
         script_duration = float(s.get("end_s") or 0) - float(
             s.get("start_s") or 0
         )
-        if abs(duration - script_duration) > 0.5:
+        if abs(duration - script_duration) > 0.01:
             issues.append(
                 {
                     "severity": "high",
@@ -78,6 +93,15 @@ def run_flow_prompt_checks(
             )
 
         prompt = str(p.get("prompt") or "")
+        if b.get("start_s") is not None and b.get("end_s") is not None:
+            if abs(float(b["start_s"]) - float(s.get("start_s") or 0)) > 0.01 or abs(float(b["end_s"]) - float(s.get("end_s") or 0)) > 0.01:
+                issues.append({"severity": "high", "scene_id": sid,
+                               "category": "production", "finding": "Storyboard timing differs from script scene timing."})
+        for match in re.finditer(r"\bduration\s*[:=]?\s*(\d+(?:\.\d+)?)\s*(?:s|seconds?)\b", prompt, re.I):
+            if abs(float(match.group(1)) - script_duration) > 0.01:
+                issues.append({"severity": "high", "scene_id": sid,
+                               "category": "production", "finding": "Embedded prompt duration differs from approved scene duration."})
+                break
         negative = str(p.get("negative_prompt") or "")
         if not prompt.strip():
             issues.append(

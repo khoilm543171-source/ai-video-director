@@ -1,110 +1,31 @@
-# Audio Pipeline
+# Audio workflow
 
-The audio system is deliberately split into separate layers so a failed sound does not force a full video rerender.
+## Google Flow episodes with native dialogue (Episode 001)
 
-## Execution order
+The approved script contains exact dialogue. Render each scene in Flow with
+native speech and lip-sync, using the same reference identities and voice
+direction across scenes. Keep ship engine-room ambience subtle. **Do not add
+music inside Flow.** Keep the eight video scenes separate until they pass
+`scripts/check_flow_clips.py` and the human dialogue/lip-sync review in
+`docs/EPISODE_001_FLOW.md`.
 
-### 1. Audio Director
-Input: approved storyboard + character bible + scene timings.
+If a line is missing, repeated or spoken by the wrong character, regenerate
+that scene. In particular, listen to the transition between the two in-scene
+render steps in scene 07. External voice tools (Chatterbox or Kokoro) are an
+optional fallback only when native speech cannot pass review; voice replacement
+also requires a renewed visual lip-sync inspection. Never layer external TTS
+over already approved native dialogue.
 
-Output: `audio_plan.json`.
+MMAudio is for ambience and visible-action Foley only: exclude speech,
+dialogue, vocals and music. ACE-Step is an optional *post-production*
+instrumental music source after scene review; it does not add music to Flow
+renders. The Episode 001 brief currently requests no music in its eight
+deliverable files.
 
-It decides:
-- who speaks,
-- delivery/emotion,
-- scene ambience,
-- visible action SFX,
-- one episode-level music prompt,
-- mix priorities.
+## Other pipeline episodes
 
-### 2. Voice Agent
-Primary: Chatterbox.
-
-Recurring characters should use stable reference clips:
-- `assets/voices/tiny_cadet.wav`
-- `assets/voices/chief_engineer.wav`
-
-Use paralinguistic tags sparingly, e.g. `[chuckle]`.
-
-Fallback: Kokoro-FastAPI for narration or low-resource runs.
-
-### 3. Music Agent
-ACE-Step 1.5 generates one continuous 60-second instrumental bed.
-
-Recommended default creative direction:
-`playful cinematic miniature adventure, light percussion, subtle industrial texture, warm educational mood, sparse arrangement, no vocals`.
-
-Music can be generated in parallel with video rendering because it does not need the finished frames.
-
-### 4. Foley / SFX Agent
-MMAudio runs only after each visual scene is rendered.
-
-Example prompt:
-`small engine-room ambience, low diesel machinery hum, ventilation, tiny metallic wrench click synchronized to the visible hand movement, realistic but soft, no speech, no vocals, no background music`.
-
-This is the layer for:
-- footsteps,
-- valve turns,
-- wrench / tool clicks,
-- hatch sounds,
-- alarms,
-- pump / purifier / engine ambience,
-- metal impacts,
-- room tone.
-
-### 5. Mixer
-`audio/mix_audio.py` aligns all clips on the episode timeline.
-
-It:
-- delays clips to their scene start time,
-- keeps dialogue at the front,
-- places Foley below speech,
-- keeps music lower,
-- side-chain ducks music when dialogue is present,
-- targets approximately -14 LUFS / -1 dB true peak.
-
-### 6. Audio Reviewer
-The reviewer watches the final video and returns one repair action:
-- `RETRY_VOICE`
-- `RETRY_SFX`
-- `RETRY_MUSIC`
-- `REMIX`
-- `PASS`
-
-Only the failed layer is regenerated.
-
-## n8n orchestration
-
-Recommended order:
-
-```
-Approved Script + Storyboard
-        |
-        v
-Audio Director
-   |           \
-   |            +--> ACE-Step Music
-   v
-Voice Agent
-   |
-   +------------------------+
-                            |
-Veo Scene Render            |
-   |                        |
-   v                        |
-MMAudio Foley per scene     |
-   |                        |
-   +-----------+------------+
-               v
-          FFmpeg Mixer
-               |
-               v
-         Audio Reviewer
-          /          \
-       FAIL          PASS
-        |              |
-retry failed layer     v
-                  Final MP4
-```
-
-Do not ask MMAudio to create the final episode soundtrack. Its job is Foley/ambient synchronization only. Dialogue and music remain separate so they can be controlled and reviewed independently.
+The generic `audio_director` stage can create an external `audio_plan.json`
+and `audio/mix_audio.py` can combine voice, SFX and music when an episode opts
+into external audio production. That generic path does not override the
+Episode 001 native Flow policy. In particular, do not run the generic mixer
+over Flow files and inadvertently duplicate native dialogue.

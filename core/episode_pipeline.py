@@ -15,6 +15,7 @@ from agents import (
     veo_prompt_builder,
 )
 from core.llm_client import OpenAICompatibleLLM
+from core.flow_prompt_checks import run_flow_prompt_checks
 from core.provider_router import ProviderRouter
 from core.schemas import EpisodeManifest, EpisodeRequest
 from core.state_manager import EpisodeStateManager
@@ -148,27 +149,39 @@ class EpisodePipeline:
             )
 
             stage = "flow_prompt_review"
-            flow_review = flow_prompt_reviewer.run(
-                self._llm("flow_prompt_review"),
-                request,
-                script,
-                storyboard,
-                context,
-                veo_prompts,
+            issues = run_flow_prompt_checks(
+                script=script.model_dump(),
+                storyboard=storyboard.model_dump(),
+                veo_prompts=veo_prompts.model_dump(),
             )
+            blockers = [item for item in issues if item.get("severity") in {"high", "critical"}]
             self.state.save_stage(
-                manifest,
-                "flow_prompt_review",
-                flow_review.model_dump(),
-                filename="flow_prompt_review.json",
+                manifest, "flow_prompt_preflight",
+                {"render_gate": "BLOCK" if blockers else "PASS", "blocking_issues": blockers,
+                 "all_deterministic_issues": issues},
             )
-
-            if flow_review.decision != "PASS":
+            if blockers:
                 manifest.status = "needs_flow_prompt_revision"
-                manifest.current_stage = "flow_prompt_review"
+                manifest.current_stage = "flow_prompt_preflight"
                 manifest.error = None
                 self.state.save_manifest(manifest)
                 return manifest
+
+            try:
+                flow_review = flow_prompt_reviewer.run(
+                    self._llm("flow_prompt_review"), request, script, storyboard,
+                    context, veo_prompts,
+                )
+            except Exception as exc:
+                self.state.save_stage(
+                    manifest, "flow_prompt_review_error",
+                    {"advisory_error": f"{type(exc).__name__}: {exc}"},
+                )
+            else:
+                self.state.save_stage(
+                    manifest, "flow_prompt_review", flow_review.model_dump(),
+                    filename="flow_prompt_review.json",
+                )
 
             stage = "audio_plan"
             audio_plan = audio_director.run(
