@@ -223,9 +223,14 @@ def main() -> int:
 
     index = []
 
-    for scene_prompt in veo_data.get("scenes", []):
-        scene_id = scene_prompt["scene_id"]
-        script_scene = script_by_id.get(scene_id, {})
+    # Remove stale generated scene prompt files from older naming schemes.
+    for stale in flow_dir.glob("scene_*.txt"):
+        stale.unlink()
+
+    for scene_number, scene_prompt in enumerate(veo_data.get("scenes", []), start=1):
+        source_scene_id = scene_prompt["scene_id"]
+        scene_id = f"scene_{scene_number:02d}"
+        script_scene = script_by_id.get(source_scene_id, {})
 
         scene_text = build_scene_prompt(
             scene_prompt,
@@ -256,6 +261,7 @@ def main() -> int:
         index.append(
             {
                 "scene_id": scene_id,
+                "source_scene_id": source_scene_id,
                 "prompt_file": str(path),
                 "expected_video": str(
                     episode_dir / "scenes" / f"{scene_id}.mp4"
