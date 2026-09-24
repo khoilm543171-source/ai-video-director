@@ -206,6 +206,11 @@ def main() -> int:
         action="store_true",
         help="Use the newest episode that already has script.json and veo_prompts.json.",
     )
+    parser.add_argument(
+        "--skip-qa-gate",
+        action="store_true",
+        help="Debug only: build the pack without requiring flow_prompt_review PASS.",
+    )
     args = parser.parse_args()
 
     episodes_root = PROJECT_ROOT / "outputs" / "episodes"
@@ -260,6 +265,26 @@ def main() -> int:
     script_data = load_json(script_path)
     veo_data = load_json(veo_path)
 
+    # Flow prompt QA gate
+    review_path = episode_dir / "flow_prompt_review.json"
+    if not args.skip_qa_gate:
+        if not review_path.exists():
+            print("Flow prompt QA has not been run yet.")
+            print(
+                "Run: python scripts/review_flow_prompts.py "
+                f"--episode-id {episode_id}"
+            )
+            return 2
+        review_data = load_json(review_path)
+        decision = review_data.get("decision")
+        if decision != "PASS":
+            print(
+                f"Flow prompt QA decision is {decision!r}; "
+                "batch generation is blocked."
+            )
+            print(f"Review report: {review_path}")
+            return 2
+
     veo_scenes = veo_data.get("scenes", [])
     print(f"Veo prompt source: {veo_path}")
     print(f"Veo scenes found : {len(veo_scenes)}")
@@ -286,6 +311,7 @@ def main() -> int:
     flow_dir.mkdir(parents=True, exist_ok=True)
 
     index = []
+    batch_sections = []
 
     # Remove stale generated scene prompt files from older naming schemes.
     for stale in flow_dir.glob("scene_*.txt"):
@@ -317,9 +343,43 @@ def main() -> int:
                 f"write_text returned {written}, file size is {actual_size}."
             )
 
+        compiled_lower = scene_text.lower()
+        dialogue = script_scene.get("dialogue", [])
+        if dialogue:
+            for line in dialogue:
+                exact = str(line.get("text") or "").strip()
+                if exact and exact not in scene_text:
+                    raise RuntimeError(
+                        f"Compiled dialogue mismatch in {scene_id}: "
+                        f"missing exact line {exact!r}"
+                    )
+            forbidden_audio = (
+                "no dialogue audio",
+                "no spoken dialogue audio",
+                "no lip-sync",
+                "lip-sync mouth shapes for spoken words",
+            )
+            conflicts = [
+                item for item in forbidden_audio
+                if item in compiled_lower
+            ]
+            if conflicts:
+                raise RuntimeError(
+                    f"Compiled audio conflict in {scene_id}: {conflicts}"
+                )
+
         print(
             f"  wrote {scene_id}: "
             f"{written} chars, {actual_size} bytes -> {path.name}"
+        )
+
+        batch_sections.append(
+            "\n".join(
+                [
+                    f"========== CLIP {scene_number:02d} / {scene_id} ==========",
+                    scene_text.strip(),
+                ]
+            )
         )
 
         index.append(
@@ -396,6 +456,10 @@ def main() -> int:
             "7. Download it as scenes/scene_01.mp4.",
             "8. Run the Visual Reviewer before scenes 02-08.",
             "",
+            "## Optional batch mode",
+            "If your current Flow UI supports multi-scene/batch generation, use FLOW_BATCH_PROMPT.txt.",
+            "The batch file contains all scene prompts in order and must only be used after flow_prompt_review.json is PASS.",
+            "",
             "Each scene prompt already includes exact approved dialogue when dialogue exists.",
             "Do not manually paraphrase or add lines in Flow.",
         ]
@@ -408,6 +472,27 @@ def main() -> int:
     )
     (flow_dir / "REFERENCE_SETUP.md").write_text(
         start_here,
+        encoding="utf-8",
+    )
+
+    batch_prompt = "\n".join(
+        [
+            "GOOGLE FLOW MULTI-SCENE BATCH BRIEF",
+            "",
+            f"Create exactly {len(batch_sections)} separate video clips in the numbered order below.",
+            "Do not merge multiple scene blocks into one clip.",
+            "Keep @TinyCadet, @ChiefEngineer and @EngineRoom visually consistent across every clip.",
+            "Preserve left/right geography and continuity from one clip to the next.",
+            "Use the exact dialogue written inside each clip block; do not paraphrase or add dialogue.",
+            "No subtitles or baked-in text. No background music.",
+            "Each block defines its own duration, camera, action, dialogue and avoid list.",
+            "",
+            *batch_sections,
+            "",
+        ]
+    )
+    (flow_dir / "FLOW_BATCH_PROMPT.txt").write_text(
+        batch_prompt,
         encoding="utf-8",
     )
 
