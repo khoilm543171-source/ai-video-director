@@ -185,3 +185,46 @@ Veo render adapter
 → FFmpeg final assembly
 → Final multimodal reviewer
 → n8n queue orchestration
+
+## Token economy
+
+The orchestrator is designed to avoid sending the full context window to every agent.
+
+Current strategy:
+- Context Builder is deterministic and uses no LLM call.
+- Each agent receives only the fields it needs.
+- JSON payloads and JSON schemas are compacted before sending.
+- Schema titles/descriptions/default metadata are stripped from prompts.
+- Identical requests are cached locally using SHA-256.
+- A per-agent soft input budget stops oversized prompts before they are sent.
+- Provider-reported prompt/completion/total token counts are logged when available.
+- Output caps are lower per stage to reduce runaway completions.
+
+Default settings in .env:
+
+    LLM_CACHE=true
+    LLM_CACHE_DIR=.cache/llm
+    LLM_PROMPT_TOKEN_BUDGET=6000
+    LLM_USAGE_LOG=outputs/token_usage.jsonl
+
+The cache is local and ignored by Git.
+
+To see which agent consumes the most tokens:
+
+    python scripts/token_report.py
+
+Example report:
+
+    agent                    calls cache     prompt     output      total
+    ------------------------------------------------------------------------
+    veo_prompt_builder           2     1       2100       1200       3300
+    script                       2     1       1500        900       2400
+    storyboard                   2     1       1300        850       2150
+
+A cache hit reports zero provider tokens because no API call is made.
+
+The budget is intentionally fail-fast: if one agent grows beyond the configured prompt budget, reduce its context slice instead of increasing the context window by default.
+
+Detailed policy:
+
+    config/token_budget.json
