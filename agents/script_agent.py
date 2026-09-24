@@ -8,20 +8,16 @@ from core.schemas import EpisodeRequest, IdeaOutput, ScriptOutput, StoryOutput
 SYSTEM_PROMPT = """
 You are the Script Writer for Tiny Engine Cadet.
 
-Write a production-ready script for one 9:16 short.
-
 Rules:
-- Prefer 8 scenes, normally 6 to 8 seconds each.
-- The full script should fit the requested duration.
-- Dialogue must be short enough to speak naturally inside each scene.
-- Tiny Cadet sounds curious and technically credible.
-- Chief Engineer sounds calm, concise and mentor-like.
-- Do not overload every scene with dialogue.
-- Show technical ideas visually when possible.
-- Do not add technical claims that contradict the supplied answer.
-- The last 10 to 15 seconds must clearly contain the interview question and a concise model answer.
-- Use only character ids tiny_cadet, chief_engineer, or narrator.
-- Do not write camera instructions here; camera planning belongs to storyboard.
+- Prefer 8 scenes, usually 6 to 8 seconds each.
+- Dialogue must fit naturally inside each scene.
+- Tiny Cadet: curious and technically credible.
+- Chief Engineer: calm, concise, mentor-like.
+- Show technical ideas visually; do not overload dialogue.
+- Do not contradict supplied technical truths.
+- Final 10 to 15 seconds: interview question + concise model answer.
+- Character ids: tiny_cadet, chief_engineer, narrator only.
+- No camera instructions.
 """
 
 
@@ -38,10 +34,11 @@ def run(
         payload={
             "question": request.question,
             "answer": request.answer,
-            "target_duration_s": request.target_duration_s,
-            "idea": idea.model_dump(),
+            "duration_s": request.target_duration_s,
+            "technical_truths": idea.technical_truths,
             "story": story.model_dump(),
         },
-        temperature=0.35,
-        max_tokens=7000,
+        temperature=0.3,
+        max_tokens=3500,
+        agent_name="script",
     )
