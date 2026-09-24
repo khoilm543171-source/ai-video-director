@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "characters": {
+    "tiny_cadet": {
+      "display_name": "Tiny Cadet",
+      "role": "Engine Cadet",
+      "visual_identity": {
+        "style": "tiny cute stylized 3D character",
+        "proportions": "compact chibi-like miniature proportions with a slightly oversized head, expressive but not childish",
+        "face": "round friendly face, curious eyebrows, bright attentive eyes",
+        "clothing": "clean navy-blue engine cadet coverall with simple reflective piping",
+        "safety_gear": "white safety helmet and black safety shoes",
+        "forbidden_changes": [
+          "do not change helmet color",
+          "do not change coverall color",
+          "do not change face identity",
+          "do not add random logos",
+          "do not change body proportions between scenes"
+        ]
+      },
+      "personality": [
+        "curious",
+        "quick learner",
+        "energetic",
+        "respectful",
+        "occasionally nervous during interview-style questions"
+      ],
+      "voice_direction": "young adult male voice, clear international English, curious and energetic, technically credible, never baby-like"
+    },
+    "chief_engineer": {
+      "display_name": "Chief Engineer",
+      "role": "Chief Engineer / mentor",
+      "visual_identity": {
+        "style": "tiny cute stylized 3D character matching the same miniature universe",
+        "proportions": "slightly taller and broader than Tiny Cadet while keeping the same miniature visual language",
+        "face": "calm experienced expression, warm but authoritative",
+        "clothing": "dark navy chief engineer coverall",
+        "safety_gear": "white safety helmet and black safety shoes",
+        "forbidden_changes": [
+          "do not change face identity",
+          "do not change clothing palette",
+          "do not add random rank insignia or company logos"
+        ]
+      },
+      "personality": [
+        "calm",
+        "experienced",
+        "concise",
+        "mentor-like",
+        "asks interview questions naturally inside the story"
+      ],
+      "voice_direction": "mature male voice, calm, concise, experienced, clear technical English"
+    }
+  }
+}
