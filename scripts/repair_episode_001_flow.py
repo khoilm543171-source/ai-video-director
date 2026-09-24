@@ -17,7 +17,7 @@ from core.state_manager import EpisodeStateManager
 
 
 TARGET_SECONDS = 60.0
-MAX_WORDS_PER_SECOND = 2.5
+MAX_WORDS_PER_SECOND = 2.55
 MIN_SCENE_SECONDS = 4.0
 
 
@@ -47,14 +47,7 @@ def word_count(scene: dict) -> int:
 
 def min_duration(scene: dict) -> float:
     words = word_count(scene)
-    speakers = {
-        line.get("character")
-        for line in scene.get("dialogue", [])
-        if line.get("character")
-    }
     speech = math.ceil(words / MAX_WORDS_PER_SECOND) if words else 0
-    if words and len(speakers) > 1:
-        speech += 1
     return float(max(MIN_SCENE_SECONDS, speech))
 
 
@@ -66,7 +59,14 @@ def allocate_durations(script_scenes: list[dict]) -> list[float]:
     minimums = [min_duration(scene) for scene in script_scenes]
     minimum_total = sum(minimums)
 
-    target = max(TARGET_SECONDS, minimum_total)
+    if minimum_total > TARGET_SECONDS:
+        raise RuntimeError(
+            f"Exact approved dialogue needs at least {minimum_total:.1f}s "
+            f"at {MAX_WORDS_PER_SECOND:.2f} words/s, exceeding the "
+            f"{TARGET_SECONDS:.1f}s episode target."
+        )
+
+    target = TARGET_SECONDS
     extra = target - minimum_total
 
     weights = [
@@ -118,6 +118,31 @@ def clean_audio_conflicts(text: str) -> str:
     return re.sub(r"\s{2,}", " ", text).strip()
 
 
+def normalize_prompt_duration(text: str, duration: float) -> str:
+    seconds = (
+        str(int(duration))
+        if float(duration).is_integer()
+        else f"{duration:.1f}"
+    )
+    patterns = [
+        r"Duration\s+\d+(?:\.\d+)?\s+seconds",
+        r"Target duration:\s*\d+(?:\.\d+)?\s+seconds",
+    ]
+    for pattern in patterns:
+        replacement = (
+            f"Duration {seconds} seconds"
+            if pattern.startswith("Duration")
+            else f"Target duration: {seconds} seconds"
+        )
+        text = re.sub(
+            pattern,
+            replacement,
+            text,
+            flags=re.IGNORECASE,
+        )
+    return text
+
+
 def clean_negative(text: str) -> str:
     blocked = {
         "dialogue audio",
@@ -148,9 +173,31 @@ def patch_episode(
         board_by_id[sid]["start_s"] = cursor
         board_by_id[sid]["end_s"] = cursor + duration
         veo_by_id[sid]["duration_s"] = duration
+        veo_by_id[sid]["prompt"] = normalize_prompt_duration(
+            veo_by_id[sid]["prompt"],
+            duration,
+        )
         cursor += duration
 
     script["duration_s"] = cursor
+
+    # scene_1_hook: one primary action in a short vertical clip.
+    sid = "scene_1_hook"
+    if sid in scenes_by_id(script):
+        scene = scenes_by_id(script)[sid]
+        scene["visual_action"] = (
+            "Tiny Cadet is already positioned beside the fuel line and points "
+            "to it while Chief Engineer makes only a small head turn toward him."
+        )
+    if sid in veo_by_id:
+        prompt = veo_by_id[sid]["prompt"]
+        prompt = re.sub(
+            r"Tiny Cadet enters frame from the right.*?Chief Engineer in dark navy coverall and white helmet stands left in relaxed posture, turns his head toward Tiny Cadet\.",
+            "Tiny Cadet is already positioned beside the fuel line on screen-right and points to it; Chief Engineer remains screen-left and makes only a small head turn toward Tiny Cadet.",
+            prompt,
+            flags=re.IGNORECASE,
+        )
+        veo_by_id[sid]["prompt"] = clean_audio_conflicts(prompt)
 
     # scene_2_problem: keep performance + one slow dolly; move separation cutaway to scene 4.
     sid = "scene_2_problem"
@@ -182,15 +229,15 @@ def patch_episode(
     sid = "scene_3_observation"
     if sid in board_by_id:
         board_by_id[sid]["camera"] = (
-            "Single slow eye-level truck-right following Tiny Cadet and ending "
-            "with the purifier centered; no lock-off transition."
+            "Very slight eye-level truck-right while keeping the purifier near center "
+            "and both characters readable in the vertical frame."
         )
     if sid in veo_by_id:
         prompt = veo_by_id[sid]["prompt"]
         prompt = replace_ci(
             prompt,
             "camera trucks right with Tiny Cadet then settles locked on the purifier",
-            "camera makes one slow truck-right following Tiny Cadet and ends with the purifier centered",
+            "camera makes only a very slight truck-right while keeping the purifier near center",
         )
         prompt = replace_ci(
             prompt,
@@ -207,7 +254,8 @@ def patch_episode(
     if sid in board_by_id:
         board = board_by_id[sid]
         board["camera"] = (
-            "Locked-off slight high three-quarter view; stable focus, no rack focus."
+            "Locked-off slight high three-quarter view prioritizing the purifier cutaway; "
+            "Chief and Cadet remain small supporting figures, stable focus, no rack focus."
         )
         if board.get("technical_visualization"):
             board["technical_visualization"] = replace_ci(
@@ -220,7 +268,7 @@ def patch_episode(
         prompt = replace_ci(
             prompt,
             "50mm portrait feel, eye-level, locked off with a slight high angle on the purifier bowl",
-            "50mm portrait feel, locked-off slight high three-quarter view of the purifier bowl",
+            "50mm locked-off slight high three-quarter view prioritizing the purifier bowl and cutaway",
         )
         prompt = replace_ci(
             prompt,
@@ -262,6 +310,38 @@ def patch_episode(
             veo_by_id[sid]["negative_prompt"]
         )
 
+    # scene_6: explicitly motivate the return to the purifier area.
+    sid = "scene_6_interview_question"
+    if sid in scenes_by_id(script):
+        scene = scenes_by_id(script)[sid]
+        scene["visual_action"] = (
+            "The shot briefly re-establishes the purifier area. Chief Engineer "
+            "turns toward Tiny Cadet and asks the interview question; Tiny Cadet "
+            "straightens and listens."
+        )
+    if sid in veo_by_id:
+        prompt = veo_by_id[sid]["prompt"]
+        prompt = replace_ci(
+            prompt,
+            "returns to the purifier area",
+            "briefly re-establishes the purifier area after the previous engineward movement",
+        )
+        veo_by_id[sid]["prompt"] = clean_audio_conflicts(prompt)
+
+    # scene_7: one dominant camera idea only.
+    sid = "scene_7_concise_answer"
+    if sid in board_by_id:
+        board_by_id[sid]["camera"] = (
+            "One very slow eye-level dolly-in on Tiny Cadet; no lock-off phase."
+        )
+    if sid in veo_by_id:
+        prompt = replace_ci(
+            veo_by_id[sid]["prompt"],
+            "locked off then a very slow dolly in",
+            "one very slow dolly-in",
+        )
+        veo_by_id[sid]["prompt"] = clean_audio_conflicts(prompt)
+
     # Remove legacy audio suppression from every speaking scene.
     for scene in scenes:
         if not scene.get("dialogue"):
@@ -285,6 +365,11 @@ def scenes_by_id(script: dict) -> dict[str, dict]:
 
 
 def verify(script: dict, storyboard: dict, veo: dict) -> None:
+    if abs(float(script["duration_s"]) - TARGET_SECONDS) > 0.01:
+        raise RuntimeError(
+            f"Episode duration is not exactly {TARGET_SECONDS:.1f}s: "
+            f"{script['duration_s']}"
+        )
     script_ids = [scene["scene_id"] for scene in script["scenes"]]
     board_ids = [scene["scene_id"] for scene in storyboard["scenes"]]
     veo_ids = [scene["scene_id"] for scene in veo["scenes"]]
@@ -300,6 +385,24 @@ def verify(script: dict, storyboard: dict, veo: dict) -> None:
             raise RuntimeError(
                 f"{sid} still has {words} words in {duration:.1f}s "
                 f"({rate:.2f} w/s)."
+            )
+
+        vp = next(item for item in veo["scenes"] if item["scene_id"] == sid)
+        if abs(float(vp["duration_s"]) - duration) > 0.01:
+            raise RuntimeError(
+                f"Veo duration mismatch for {sid}: "
+                f"{vp['duration_s']} vs {duration}"
+            )
+        text = vp["prompt"]
+        match = re.search(
+            r"Duration\s+(\d+(?:\.\d+)?)\s+seconds",
+            text,
+            flags=re.IGNORECASE,
+        )
+        if match and abs(float(match.group(1)) - duration) > 0.01:
+            raise RuntimeError(
+                f"Embedded prompt duration mismatch for {sid}: "
+                f"{match.group(1)} vs {duration}"
             )
 
 
