@@ -20,6 +20,17 @@ TARGET_SECONDS = 60.0
 MAX_WORDS_PER_SECOND = 2.55
 MIN_SCENE_SECONDS = 4.0
 
+PREFERRED_DURATIONS = {
+    "scene_1_hook": 5.0,
+    "scene_2_problem": 11.0,
+    "scene_3_observation": 8.0,
+    "scene_4_explanation": 11.0,
+    "scene_5_realization": 8.0,
+    "scene_6_interview_question": 4.0,
+    "scene_7_concise_answer": 9.0,
+    "scene_8_resolution": 4.0,
+}
+
 
 def load_json(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
@@ -51,7 +62,33 @@ def min_duration(scene: dict) -> float:
     return float(max(MIN_SCENE_SECONDS, speech))
 
 
+def preferred_durations(script_scenes: list[dict]) -> list[float] | None:
+    ids = [scene.get("scene_id") for scene in script_scenes]
+    if set(ids) != set(PREFERRED_DURATIONS):
+        return None
+
+    values = [PREFERRED_DURATIONS[sid] for sid in ids]
+    if abs(sum(values) - TARGET_SECONDS) > 0.01:
+        raise RuntimeError(
+            f"Preferred durations must total {TARGET_SECONDS:.1f}s, "
+            f"got {sum(values):.1f}s."
+        )
+
+    for scene, duration in zip(script_scenes, values):
+        words = word_count(scene)
+        rate = words / duration if duration else 999
+        if words and rate > MAX_WORDS_PER_SECOND + 0.01:
+            raise RuntimeError(
+                f"Preferred timing for {scene['scene_id']} is too tight: "
+                f"{words} words / {duration:.1f}s = {rate:.2f} w/s."
+            )
+    return values
+
+
 def allocate_durations(script_scenes: list[dict]) -> list[float]:
+    preferred = preferred_durations(script_scenes)
+    if preferred is not None:
+        return preferred
     original = [
         float(scene["end_s"]) - float(scene["start_s"])
         for scene in script_scenes
@@ -186,20 +223,66 @@ def patch_episode(
     if sid in scenes_by_id(script):
         scene = scenes_by_id(script)[sid]
         scene["visual_action"] = (
-            "Tiny Cadet is already positioned beside the fuel line and points "
-            "to it while Chief Engineer makes only a small head turn toward him."
+            "Tiny Cadet is already positioned screen-right beside the fuel line and points "
+            "toward the pipe running screen-left to screen-right; Chief Engineer remains "
+            "screen-left and makes only a small head turn toward him."
         )
     if sid in veo_by_id:
         prompt = veo_by_id[sid]["prompt"]
         prompt = re.sub(
             r"Tiny Cadet enters frame from the right.*?Chief Engineer in dark navy coverall and white helmet stands left in relaxed posture, turns his head toward Tiny Cadet\.",
-            "Tiny Cadet is already positioned beside the fuel line on screen-right and points to it; Chief Engineer remains screen-left and makes only a small head turn toward Tiny Cadet.",
+            "Tiny Cadet is already positioned screen-right beside the fuel line and points toward the pipe running screen-left to screen-right; Chief Engineer remains screen-left and makes only a small head turn toward Tiny Cadet.",
             prompt,
             flags=re.IGNORECASE,
         )
         veo_by_id[sid]["prompt"] = clean_audio_conflicts(prompt)
 
-    # scene_2_problem: keep performance + one slow dolly; move separation cutaway to scene 4.
+    # scene_2_problem: dialogue-first, one simple composition, no overlay/cutaway.
+    sid = "scene_2_problem"
+    if sid in scenes_by_id(script):
+        scene = scenes_by_id(script)[sid]
+        scene["visual_action"] = (
+            "Tiny Cadet remains screen-right beside the fuel pipe and looks concerned; "
+            "Chief Engineer remains screen-left and gives one small confirming nod. "
+            "The fuel pipe continues screen-left to screen-right."
+        )
+    if sid in board_by_id:
+        board = board_by_id[sid]
+        board["camera"] = (
+            "Fixed eye-level medium two-shot; no dolly, pan, truck, or cutaway."
+        )
+        board["composition"] = (
+            "Tiny Cadet screen-right, Chief Engineer screen-left, fuel pipe crossing "
+            "the lower frame screen-left to screen-right in vertical 9:16."
+        )
+        board["technical_visualization"] = None
+    if sid in veo_by_id:
+        prompt = veo_by_id[sid]["prompt"]
+        # Remove any imagined/cutaway/overlay sentences.
+        prompt = re.sub(
+            r"\s*In the upper-center safe area.*?(?:no text labels\.|camera shake)",
+            "",
+            prompt,
+            flags=re.IGNORECASE,
+        )
+        prompt = re.sub(
+            r"Visible action:.*?Blocking:",
+            "Visible action: Tiny Cadet remains screen-right beside the fuel pipe and looks concerned; Chief Engineer remains screen-left and gives one small confirming nod. The fuel pipe continues screen-left to screen-right. Blocking:",
+            prompt,
+            flags=re.IGNORECASE,
+        )
+        prompt = re.sub(
+            r"Blocking:.*?Lighting:",
+            "Blocking: fixed eye-level medium two-shot, no camera movement; Tiny Cadet screen-right, Chief Engineer screen-left, pipe crossing lower frame left-to-right in the vertical 9:16 safe area. Lighting:",
+            prompt,
+            flags=re.IGNORECASE,
+        )
+        veo_by_id[sid]["prompt"] = clean_audio_conflicts(prompt)
+        veo_by_id[sid]["negative_prompt"] = clean_negative(
+            veo_by_id[sid]["negative_prompt"]
+        )
+
+    # legacy scene_2 cleanup retained below.
     sid = "scene_2_problem"
     if sid in board_by_id:
         board = board_by_id[sid]
@@ -229,15 +312,14 @@ def patch_episode(
     sid = "scene_3_observation"
     if sid in board_by_id:
         board_by_id[sid]["camera"] = (
-            "Very slight eye-level truck-right while keeping the purifier near center "
-            "and both characters readable in the vertical frame."
+            "Fixed eye-level medium shot centered on the purifier; no truck or pan."
         )
     if sid in veo_by_id:
         prompt = veo_by_id[sid]["prompt"]
         prompt = replace_ci(
             prompt,
             "camera trucks right with Tiny Cadet then settles locked on the purifier",
-            "camera makes only a very slight truck-right while keeping the purifier near center",
+            "camera remains fixed in an eye-level medium shot centered on the purifier",
         )
         prompt = replace_ci(
             prompt,
@@ -249,13 +331,46 @@ def patch_episode(
             veo_by_id[sid]["negative_prompt"]
         )
 
+    # scene_3: remove walk+truck overload; character is already at purifier.
+    sid = "scene_3_observation"
+    if sid in scenes_by_id(script):
+        scene = scenes_by_id(script)[sid]
+        scene["visual_action"] = (
+            "Tiny Cadet is already beside the purifier and looks at it; "
+            "Chief Engineer remains screen-left and makes one open-palm gesture toward the machine."
+        )
+    if sid in board_by_id:
+        board = board_by_id[sid]
+        board["camera"] = (
+            "Fixed eye-level medium shot centered on the purifier; no truck or pan."
+        )
+        board["composition"] = (
+            "Purifier centered, inlet screen-left, outlet screen-right; "
+            "Chief Engineer screen-left and Tiny Cadet screen-right in vertical 9:16."
+        )
+    if sid in veo_by_id:
+        prompt = veo_by_id[sid]["prompt"]
+        prompt = re.sub(
+            r"Visible action:.*?Blocking:",
+            "Visible action: Tiny Cadet is already beside the purifier on screen-right and looks at it; Chief Engineer remains screen-left and makes one small open-palm gesture toward the machine. Blocking:",
+            prompt,
+            flags=re.IGNORECASE,
+        )
+        prompt = re.sub(
+            r"Blocking:.*?The purifier bowl",
+            "Blocking: fixed eye-level medium shot centered on the purifier; inlet screen-left, outlet screen-right, Chief Engineer screen-left and Tiny Cadet screen-right in the vertical 9:16 safe area. The purifier bowl",
+            prompt,
+            flags=re.IGNORECASE,
+        )
+        veo_by_id[sid]["prompt"] = clean_audio_conflicts(prompt)
+
     # scene_4_explanation: preserve only supported centrifugal-separation concept.
     sid = "scene_4_explanation"
     if sid in board_by_id:
         board = board_by_id[sid]
         board["camera"] = (
-            "Locked-off slight high three-quarter view prioritizing the purifier cutaway; "
-            "Chief and Cadet remain small supporting figures, stable focus, no rack focus."
+            "Fixed eye-level medium shot centered on the purifier cutaway; "
+            "Chief and Cadet remain small edge-of-frame supporting figures; no camera movement."
         )
         if board.get("technical_visualization"):
             board["technical_visualization"] = replace_ci(
@@ -268,12 +383,12 @@ def patch_episode(
         prompt = replace_ci(
             prompt,
             "50mm portrait feel, eye-level, locked off with a slight high angle on the purifier bowl",
-            "50mm locked-off slight high three-quarter view prioritizing the purifier bowl and cutaway",
+            "50mm fixed eye-level medium shot centered on the purifier bowl and cutaway",
         )
         prompt = replace_ci(
             prompt,
             "one rack focus from Chief Engineer's face to the purifier cutaway",
-            "stable focus that keeps the Chief Engineer and purifier cutaway readable",
+            "stable focus on the purifier cutaway; characters remain secondary",
         )
         prompt = replace_ci(
             prompt,
@@ -328,19 +443,65 @@ def patch_episode(
         )
         veo_by_id[sid]["prompt"] = clean_audio_conflicts(prompt)
 
+    # scene_7: protect the long exact answer with a static speaking shot.
+    sid = "scene_7_concise_answer"
+    if sid in scenes_by_id(script):
+        scene = scenes_by_id(script)[sid]
+        scene["visual_action"] = (
+            "Tiny Cadet faces Chief Engineer and delivers the approved answer steadily. "
+            "Chief Engineer listens and gives one small approving nod at the end."
+        )
+    if sid in board_by_id:
+        board_by_id[sid]["camera"] = (
+            "Fixed eye-level medium close-up on Tiny Cadet; no dolly, pan, or glance choreography."
+        )
+    if sid in veo_by_id:
+        prompt = veo_by_id[sid]["prompt"]
+        prompt = re.sub(
+            r"Visible action:.*?Blocking:",
+            "Visible action: Tiny Cadet faces Chief Engineer and delivers the approved answer steadily; Chief Engineer listens and gives one small approving nod only at the end. Blocking:",
+            prompt,
+            flags=re.IGNORECASE,
+        )
+        prompt = re.sub(
+            r"Blocking:.*?Lighting:",
+            "Blocking: fixed eye-level medium close-up on Tiny Cadet; Chief Engineer remains at the left edge and purifier stays softly visible in the right background; no dolly, pan, or glance choreography. Lighting:",
+            prompt,
+            flags=re.IGNORECASE,
+        )
+        veo_by_id[sid]["prompt"] = clean_audio_conflicts(prompt)
+
     # scene_7: one dominant camera idea only.
     sid = "scene_7_concise_answer"
     if sid in board_by_id:
         board_by_id[sid]["camera"] = (
-            "One very slow eye-level dolly-in on Tiny Cadet; no lock-off phase."
+            "Fixed eye-level medium close-up on Tiny Cadet; no camera movement."
         )
     if sid in veo_by_id:
         prompt = replace_ci(
             veo_by_id[sid]["prompt"],
             "locked off then a very slow dolly in",
-            "one very slow dolly-in",
+            "fixed eye-level medium close-up",
         )
         veo_by_id[sid]["prompt"] = clean_audio_conflicts(prompt)
+
+    # Strengthen generic text/signage blocking for every Flow scene.
+    for item in veo.get("scenes", []):
+        existing = [
+            part.strip()
+            for part in item.get("negative_prompt", "").split(",")
+            if part.strip()
+        ]
+        required = [
+            "readable machinery text",
+            "random signage",
+            "on-screen text",
+        ]
+        lower = {part.lower() for part in existing}
+        for term in required:
+            if term.lower() not in lower:
+                existing.append(term)
+        item["negative_prompt"] = ", ".join(existing)
 
     # Remove legacy audio suppression from every speaking scene.
     for scene in scenes:
